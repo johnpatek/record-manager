@@ -1,0 +1,3 @@
+[submodule "common/json11"]
+	path = common/json11
+	url = https://github.com/johnpatek/json11
