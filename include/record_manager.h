@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <string>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <list>
 #include <unordered_map>
@@ -31,7 +32,7 @@ namespace rmp
     class server
     {
     public:
-        server(uint16_t port);
+        server(uint16_t port, const std::string& root_directory);
         ~server();
     private:
         struct hash
@@ -41,7 +42,8 @@ namespace rmp
                 return djb_hash(data);
             }
         };
-        std::unordered_map<std::string,std::string,hash> _cache;    
+        std::unordered_map<std::string,std::string,hash> _cache;
+        std::string _root_directory;    
     };
 
     class client
