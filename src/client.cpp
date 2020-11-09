@@ -1,7 +1,8 @@
 #include "record_manager.h"
-#include <iostream>
+
 int main(int argc, const char ** argv)
 {
-    std::cerr << rmp::djb_hash("johnpatek2@gmail.com") << std::endl;    
+    std::fstream file(rmp::djb_hash("johnpatek2@gmail.com"),std::ios::out);
+    file << "hello" << std::endl;
     return 0;
 }
