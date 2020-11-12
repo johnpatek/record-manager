@@ -4,26 +4,49 @@
 #include <sstream>
 #include <list>
 #include <unordered_map>
-
+#include "json.h"
 
 namespace rmp
 {
     std::string djb_hash(const std::string& data);
 
-    class record
+    BEGIN_JSON_OBJECT(record)
+        JSON_PRIMITIVE(email,"email",std::string);
+        JSON_PRIMITIVE(first,"first",std::string);
+        JSON_PRIMITIVE(last,"last",std::string);
+        JSON_PRIMITIVE(phone,"phone",std::string);
+        JSON_KEY(email);
+    END_JSON_OBJECT
+
+    BEGIN_JSON_OBJECT(record_list)
+        JSON_ARRAY_ITEMS(records,"records",record);
+    END_JSON_OBJECT
+
+    void f()
     {
-    private:
-        std::string _first_name;
-        std::string _last_name;
-        std::string _phone;
+        record_list rl;
+        parse_json<record_list>("{}");
+    }
+    enum command_codes
+    {
+        CREATE,
+        READ,
+        UPDATE,
+        DELETE
     };
 
-    class request
+    class request_header
     {
-
+        uint8_t command_code;
     };
 
-    class response
+    enum status_codes
+    {
+        Ok,
+        ERROR
+    };
+
+    class response_header
     {
 
     };
@@ -31,17 +54,19 @@ namespace rmp
     class server
     {
     public:
-        server(uint16_t port);
+    
+        server(uint16_t port, const std::string& root_directory);
+        
         ~server();
+
+        void start();
+        
+        void run();
+        
+        void stop();
+    
     private:
-        struct hash
-        {
-            std::string operator()(const std::string& data)
-            {
-                return djb_hash(data);
-            }
-        };
-        std::unordered_map<std::string,std::string,hash> _cache;    
+        std::pair<std::string,record_list> _cache;
     };
 
     class client
@@ -49,5 +74,18 @@ namespace rmp
     public:
         client(const std::string& host, uint16_t port);
         ~client();
+
+        std::pair<bool,std::string> create_record(const record& data);
+
+        std::pair<bool,std::string> read_record(std::string& email);
+
+        std::pair<bool,std::string> update_record(const record& data);
+
+        std::pair<bool,std::string> delete_record(const std::string& email);
+
+    private:
+        std::pair<response_header,std::string> send_request(
+            const request_header& header, 
+            const std::string& body);
     };
 }

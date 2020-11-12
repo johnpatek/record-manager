@@ -7,7 +7,7 @@ else()
 set(CMAKE_CXX_FLAGS  "-std=c++14 -O3")
 endif()
 
-include_directories(include)
+include_directories(include common/json11/include)
 
 add_library(rmp STATIC src/record_manager.cpp)
 add_executable(client src/client.cpp)
