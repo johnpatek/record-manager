@@ -6,29 +6,49 @@
 #include <sstream>
 #include <list>
 #include <unordered_map>
-#include "json.h"
+#include <json11/json11.hpp>
 
 namespace rmp
 {
     std::string djb_hash(const std::string& data);
 
-    BEGIN_JSON_OBJECT(record)
-        JSON_PRIMITIVE(email,"email",std::string);
-        JSON_PRIMITIVE(first,"first",std::string);
-        JSON_PRIMITIVE(last,"last",std::string);
-        JSON_PRIMITIVE(phone,"phone",std::string);
-        JSON_KEY(email);
-    END_JSON_OBJECT
-
-    BEGIN_JSON_OBJECT(record_list)
-        JSON_ARRAY_ITEMS(records,"records",record);
-    END_JSON_OBJECT
-
-    void f()
+    class info
     {
-        record_list rl;
-        parse_json<record_list>("{}");
-    }
+    public:
+        info(const std::string& str);
+
+        info(const json11::Json& json);
+
+        info(
+            const std::string& name,
+            const std::string& phone);
+        
+        std::string& get_name() const;
+
+        bool has_name() const;
+
+        void set_name(const std::string& name);
+
+        std::string& get_phone() const;
+
+        bool has_phone() const;
+
+        void set_phone(const std::string& phone);
+
+    private:
+        json11::Json::object _data;
+    };
+
+    class record
+    {
+    public:
+        record(const std::string& str);
+
+        record(const json11::Json& json);
+    private:
+
+    };
+    
     enum command_codes
     {
         CREATE,
@@ -37,7 +57,7 @@ namespace rmp
         DELETE
     };
 
-    class request_header
+    struct request_header
     {
         uint8_t command_code;
     };
@@ -48,9 +68,9 @@ namespace rmp
         ERROR
     };
 
-    class response_header
+    struct response_header
     {
-
+        uint8_t status_code;
     };
 
     class server
@@ -68,7 +88,7 @@ namespace rmp
         void stop();
     
     private:
-        std::pair<std::string,record_list> _cache;
+        int _listener;
     };
 
     class client
@@ -77,11 +97,11 @@ namespace rmp
         client(const std::string& host, uint16_t port);
         ~client();
 
-        std::pair<bool,std::string> create_record(const record& data);
+        std::pair<bool,std::string> create_record(const std::string& email, const info& data);
 
-        std::pair<bool,std::string> read_record(std::string& email);
+        std::pair<bool,std::string> read_record(const std::string& email);
 
-        std::pair<bool,std::string> update_record(const record& data);
+        std::pair<bool,std::string> update_record(const std::string& email, const info& data);
 
         std::pair<bool,std::string> delete_record(const std::string& email);
 
