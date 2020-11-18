@@ -6,7 +6,23 @@
 #include <sstream>
 #include <list>
 #include <unordered_map>
+#include <vector>
+#include <algorithm>
 #include <json11/json11.hpp>
+#if defined(_WIN32)
+#include <Winsock2.h>
+#include <ws2tcpip.h>
+#include <io.h>
+#pragma  comment(lib, "ws2_32.lib ")
+#else /* Unix */
+#include <arpa/inet.h> 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
+#endif
+
 
 namespace rmp
 {
@@ -93,7 +109,7 @@ namespace rmp
 
     enum status_codes
     {
-        Ok,
+        OK,
         ERROR
     };
 
@@ -126,7 +142,14 @@ namespace rmp
     {
     public:
         client(const std::string& host, uint16_t port);
+
         ~client();
+
+        void open_connection();
+
+        void close_connection();
+
+        void set_address(const std::string& host, uint16_t port);
 
         std::pair<bool,std::string> create_record(const std::string& email, const info& data);
 
@@ -137,8 +160,12 @@ namespace rmp
         std::pair<bool,std::string> delete_record(const std::string& email);
 
     private:
-        std::pair<response_header,std::vector<uint8_t>> send_request(
+        std::pair<response_header,std::vector<uint8_t>> process_request(
             const request_header& header, 
             const std::string& body);
+        int _socket;
     };
+
+    const size_t RESPONSE_HEADER_SIZE = sizeof(response_header);
+    const size_t REQUEST_HEADER_SIZE = sizeof(request_header);
 }

@@ -125,3 +125,54 @@ std::string rmp::record::to_string() const
 {
     return to_json().dump();
 }
+
+std::pair<bool,std::string> rmp::client::create_record(
+    const std::string& email, 
+    const rmp::info& data)
+{
+    std::pair<bool,std::string> result;
+    std::pair<rmp::request_header,std::string> request;
+    std::pair<rmp::response_header,std::vector<uint8_t>> response;
+    request.first.command_code = rmp::command_codes::CREATE;
+    response = process_request(request.first,request.second);
+    result.first = (response.first.status_code == rmp::status_codes::OK);
+    result.second = std::string(
+        response.second.begin(),
+        response.second.end());
+    return result;
+}
+
+std::pair<bool,std::string> rmp::client::read_record(
+    const std::string& email)
+{
+
+}
+
+std::pair<bool,std::string> rmp::client::update_record(
+    const std::string& email, 
+    const rmp::info& data)
+{
+
+}
+
+std::pair<bool,std::string> rmp::client::delete_record(
+    const std::string& email)
+{
+
+}
+
+std::pair<rmp::response_header,std::vector<uint8_t>> rmp::client::process_request(
+    const rmp::request_header& header, 
+    const std::string& body)
+{
+    std::pair<rmp::response_header,std::vector<uint8_t>> result;
+    open_connection();
+    write(_socket,&header,rmp::REQUEST_HEADER_SIZE);
+    
+    read(_socket,&result.first,rmp::RESPONSE_HEADER_SIZE);
+    result.second.resize(
+        result.first.size);
+    read(_socket,result.second.data(),result.second.size());
+    close_connection();
+    return result;
+}
