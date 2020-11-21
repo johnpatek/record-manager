@@ -144,28 +144,11 @@ namespace rmp
         uint32_t size;
     };
 
-    class server
-    {
-    public:
-    
-        server(uint16_t port, const std::string& root_directory);
-        
-        ~server();
-
-        void start();
-        
-        void run();
-        
-        void stop();
-    
-    private:
-        bool _running;
-        int _listener;
-    };
-
     class client
     {
     public:
+        client() = default;
+
         client(const std::string& host, uint16_t port);
 
         ~client();
@@ -190,6 +173,46 @@ namespace rmp
             const std::string& body) noexcept;
         int _socket;
         sockaddr_in _address;
+    };
+
+    class server
+    {
+    public:
+        server() = default;
+
+        server(uint16_t port, const std::string& root_directory);
+
+        ~server();
+
+        void set_port(uint16_t port);
+
+        void set_root_directory(const std::string& root_directory);
+
+        void start();
+        
+        void run();
+        
+        void stop();
+    
+    private:
+        void handle_request(int socket);
+
+        std::pair<response_header,std::string> on_create(
+            const std::string& request_body);
+
+        std::pair<response_header,std::string> on_read(
+            const std::string& request_body);
+
+        std::pair<response_header,std::string> on_update(
+            const std::string& request_body);
+
+        std::pair<response_header,std::string> on_delete(
+            const std::string& request_body);
+
+        uint16_t _port;
+        std::string _root_directory;
+        bool _running;
+        int _listener;
     };
 
     const size_t RESPONSE_HEADER_SIZE = sizeof(response_header);

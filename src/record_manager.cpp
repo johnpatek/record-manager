@@ -151,6 +151,16 @@ std::string rmp::record::to_string() const
     return to_json().dump();
 }
 
+rmp::client::client(const std::string& host, uint16_t port)
+{
+    set_address(host,port);
+}
+
+rmp::client::~client()
+{
+
+}
+
 void rmp::client::open_connection()
 {
     _socket = socket(PF_INET,SOCK_STREAM,0);
@@ -264,16 +274,19 @@ std::pair<bool,std::string> rmp::client::process_request(
                 body.data()),
             body.size());
         read_response_header(_socket,&response_header);
-        response_body.resize(response_header.size);
-        read_response_body(
-            _socket,
-            response_body.data(),
-            response_body.size());
-        result.first = (response_header.status_code == rmp::status_codes::OK);
-        std::move(
-            response_body.begin(),
-            response_body.end(),
-            result.second.begin());
+        if(response_header.size > 0)
+        {
+            response_body.resize(response_header.size);
+            read_response_body(
+                _socket,
+                response_body.data(),
+                response_body.size());
+            result.first = (response_header.status_code == rmp::status_codes::OK);
+            std::move(
+                response_body.begin(),
+                response_body.end(),
+                result.second.begin());
+        }
     }
     catch(const std::exception& e)
     {
