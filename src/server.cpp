@@ -24,67 +24,32 @@
  *******************************************************************/
 #include "record_manager.h"
 
-static bool parse_args(
+static bool server_init(
+    std::shared_ptr<rmp::server>& server,
     int argc, 
-    const char** argv, 
-    uint16_t& port, 
-    std::string& root_directory);
+    const char ** argv);
 
-static void print_usage();
-
-static void server_main(
-    uint16_t port, 
-    const std::string& root_directory);
+static bool server_main(
+    std::shared_ptr<rmp::server>& server) noexcept;
 
 int main(int argc, const char ** argv)
 {
-    uint16_t port;
-    std::string root_directory;
-    if(parse_args(argc,argv,port,root_directory))
-    {
-        server_main(
-            port,
-            root_directory);
-    }
-    else
-    {
-        print_usage();
-    }
-    return 0;
+    std::shared_ptr<rmp::server> server;
+    return (server_init(server,argc,argv) 
+        && server_main(server))
+        ? EXIT_SUCCESS:EXIT_FAILURE;
 }
 
-static bool parse_args(
+static bool server_init(
+    std::shared_ptr<rmp::server>& server,
     int argc, 
-    const char** argv, 
-    uint16_t& port, 
-    std::string& root_directory)
+    const char ** argv)
 {
-    bool result(false);
-    result = (argc == 3);
-    if(result)
-    {
-        try
-        {
-            port = std::stoi(argv[1]);
-        }
-        catch(const std::exception& e)
-        {
-            result = false;
-        }
-    }
-    root_directory = (result)?argv[2]:"";
-    return result;
+    return true;
 }
 
-static void print_usage()
+static bool server_main(
+    std::shared_ptr<rmp::server>& server) noexcept
 {
-    std::cerr << "server <port> <root-directory>" << std::endl;
-}
-
-static void server_main(
-    uint16_t port, 
-    const std::string& root_directory)
-{
-    std::cerr << port           << std::endl
-              << root_directory << std::endl;
+    return true;
 }

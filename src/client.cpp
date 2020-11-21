@@ -24,17 +24,75 @@
  *******************************************************************/
 #include "record_manager.h"
 
-class json_info : public json11::Json::object
-{
+static bool client_init(
+    std::shared_ptr<rmp::client>& client,
+    int argc, 
+    const char ** argv) noexcept;
 
-};
+static bool client_main(
+    std::shared_ptr<rmp::client>& client) noexcept;
 
 int main(int argc, const char ** argv)
 {
-    json11::Json::object record;
-    json_info info;
-    info["email"] = "johnpatek2@gmail.com";
-    record["info"] = info;
-    std::cerr << json11::Json(record).dump() << std::endl;
-    return 0;
+    std::shared_ptr<rmp::client> client;
+    return (client_init(client,argc,argv) 
+        && client_main(client)) 
+        ? EXIT_SUCCESS:EXIT_FAILURE;
+}
+
+static bool client_init(
+    std::shared_ptr<rmp::client>& client,
+    int argc, 
+    const char ** argv) noexcept
+{
+    bool result(true);
+    std::string error_message;
+    std::string remote_host;
+    uint16_t remote_port;
+
+    result = (argc == 3);
+
+    if(result)
+    {
+        try
+        {
+            remote_host = argv[1];
+            remote_port = std::stoi(argv[2]);
+            client = std::make_shared<rmp::client>(
+                remote_host,
+                remote_port);
+        }
+        catch(const std::exception& e)
+        {
+            result = false;
+        }
+    }
+    else
+    {
+        error_message = "3 args expected, " + std::to_string(argc) + " found.";
+    }
+    
+
+    if (!result)
+    {
+        std::cerr << "Failed to parse args: "
+                  << error_message
+                  << std::endl
+                  << "client <address> <port>"
+                  << std::endl;
+    }
+
+    return result;
+}
+
+static bool client_main(
+    std::shared_ptr<rmp::client>& client) noexcept
+{
+    bool result(true);
+    bool loop(true);
+    while(result && loop)
+    {
+        loop = false;
+    }
+    return result;
 }
