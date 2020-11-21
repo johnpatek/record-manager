@@ -135,6 +135,7 @@ namespace rmp
         void stop();
     
     private:
+        bool _running;
         int _listener;
     };
 
@@ -160,10 +161,11 @@ namespace rmp
         std::pair<bool,std::string> delete_record(const std::string& email);
 
     private:
-        std::pair<response_header,std::vector<uint8_t>> process_request(
-            const request_header& header, 
-            const std::string& body);
+        std::pair<bool,std::string> process_request(
+            int command_code, 
+            const std::string& body) noexcept;
         int _socket;
+        sockaddr_in _address;
     };
 
     const size_t RESPONSE_HEADER_SIZE = sizeof(response_header);
