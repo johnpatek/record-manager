@@ -85,14 +85,196 @@ static bool client_init(
     return result;
 }
 
+static std::string get_input(
+    const std::string& prompt);
+
+static void create_command(
+    std::shared_ptr<rmp::client>& client);
+
+static void read_command(
+    std::shared_ptr<rmp::client>& client);
+
+static void update_command(
+    std::shared_ptr<rmp::client>& client);
+
+static void delete_command(
+    std::shared_ptr<rmp::client>& client);
+
+static void print_help();
+
 static bool client_main(
     std::shared_ptr<rmp::client>& client) noexcept
 {
     bool result(true);
     bool loop(true);
+    std::string line_buffer;
     while(result && loop)
     {
-        loop = false;
+        std::cerr << ">>> ";
+        std::getline(std::cin,line_buffer);
+        try
+        {        
+            if(line_buffer == "create")
+            {
+                create_command(client);
+            }
+            else if(line_buffer == "read")
+            {
+                read_command(client);
+            }
+            else if(line_buffer == "update")
+            {
+                update_command(client);
+            }
+            else if(line_buffer == "delete")
+            {
+                delete_command(client);
+            }
+            else if(line_buffer == "exit")
+            {
+                loop = false;
+            }
+            else if(line_buffer == "help")
+            {
+                print_help();
+            }
+            else
+            {
+                std::cerr << "Unrecognized command. " 
+                        << "Enter \"help\" "
+                        << "for more information." 
+                        << std::endl;
+            }
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+            result = false;
+        }
     }
     return result;
+}
+
+static std::string get_input(
+    const std::string& prompt)
+{
+    std::string result;
+    std::cerr << prompt << ": ";
+    std::getline(std::cin,result);
+    return result;
+}
+
+static void create_command(
+    std::shared_ptr<rmp::client>& client)
+{
+    std::string email,name,phone;
+    std::pair<bool,std::string> result;
+
+    email = get_input("email");
+    name = get_input("name");
+    phone = get_input("phone");
+
+    result = client->create_record(
+        email,
+        rmp::info(name,phone));
+
+    if(!result.first)
+    {
+        std::cerr << "Error: ";
+    }
+
+    std::cerr << result.second << std::endl;
+}
+
+static void read_command(
+    std::shared_ptr<rmp::client>& client)
+{
+    std::string email;
+    std::pair<bool,std::string> result;
+
+    email = get_input("email");
+
+    result = client->read_record(email);
+
+    if(!result.first)
+    {
+        std::cerr << "Error: ";
+    }
+    
+    std::cerr << result.second << std::endl;
+}
+
+static void update_command(
+    std::shared_ptr<rmp::client>& client)
+{
+    std::string email,name,phone;
+    rmp::info info;
+    std::pair<bool,std::string> result;
+
+    email = get_input("email");
+    name = get_input("name(leave blank if unchanged)");
+    phone = get_input("phone(leave blank if unchanged)");
+
+    if(name.size() > 0)
+    {
+        info.set_name(name);
+    }
+
+    if(phone.size() > 0)
+    {
+        info.set_phone(phone);
+    }
+
+    result = client->update_record(
+        email,info);
+
+    if(!result.first)
+    {
+        std::cerr << "Error: ";
+    }
+    
+    std::cerr << result.second << std::endl;
+}
+
+static void delete_command(
+    std::shared_ptr<rmp::client>& client)
+{
+    std::string email;
+    std::pair<bool,std::string> result;
+
+    email = get_input("email");
+
+    result = client->delete_record(email);
+
+    if(!result.first)
+    {
+        std::cerr << "Error: ";
+    }
+    
+    std::cerr << result.second << std::endl;
+}
+
+static void print_help()
+{
+    std::cerr << std::endl << std::setw(5) << '\0'
+              << "client - RMP client shell" 
+              << std::endl << std::endl;
+    std::cerr << std::setw(5) << '\0' << std::setw(15) 
+              << std::left << "create" << std::setw(50)
+              << "Create a new record on the server." << std::endl;
+    std::cerr << std::setw(5) << '\0' << std::setw(15) 
+              << std::left << "read" << std::setw(50)
+              << "Read an existing record from the server." << std::endl;
+    std::cerr << std::setw(5) << '\0' <<  std::setw(15) 
+              << std::left << "update" << std::setw(50)
+              << "Update an existing record on the server." << std::endl;
+    std::cerr << std::setw(5) << '\0' <<  std::setw(15) 
+              << std::left << "create" << std::setw(50)
+              << "Delete an existing record from the server." << std::endl;
+    std::cerr << std::setw(5) << '\0' << std::setw(15) 
+              << std::left << "exit" << std::setw(50)
+              << "Exit the client program." << std::endl;
+    std::cerr << std::setw(5) << '\0' << std::setw(15) 
+              << std::left << "help" << std::setw(50)
+              << "Print this message." << std::endl << std::endl;
 }

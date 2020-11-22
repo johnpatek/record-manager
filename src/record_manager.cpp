@@ -25,6 +25,42 @@
 
 #include "record_manager.h"
 
+static void read_request_header(
+    int socket,
+    rmp::request_header * const request_header);
+
+static void read_request_body(
+    int socket,
+    uint8_t * const request_buffer,
+    size_t request_size);
+
+static void write_request_header(
+    int socket,
+    const rmp::request_header * const request_header);
+
+static void write_request_body(
+    int socket,
+    const uint8_t * const request_buffer,
+    size_t request_size);
+
+static void read_response_header(
+    int socket,
+    rmp::response_header * const request_header);
+
+static void read_response_body(
+    int socket,
+    uint8_t * const response_buffer,
+    size_t request_size);
+
+static void write_response_header(
+    int socket,
+    const rmp::response_header * const response_header);
+
+static void write_response_body(
+    int socket,
+    const uint8_t * const response_buffer,
+    size_t response_size);
+
 std::string rmp::djb_hash(const std::string& data)
 {
     std::stringstream hash_string;
@@ -37,9 +73,28 @@ std::string rmp::djb_hash(const std::string& data)
     return hash_string.str();
 }
 
+static json11::Json parse_json(const char * const buffer)
+{
+    std::string error;
+    json11::Json result = json11::Json::parse(
+        buffer,
+        error,
+        json11::JsonParse::STANDARD);
+    if(error.size() > 0)
+    {
+        throw std::runtime_error(error);
+    }
+    return result;
+}
+
+static json11::Json parse_json(const std::string& data)
+{
+    return parse_json(data.c_str());
+}
+
 rmp::info::info(const std::string& str)
 {
-    _info_data = json11::Json(str).object_items();
+    _info_data = parse_json(str).object_items();
 }
 
 rmp::info::info(const json11::Json& json)
@@ -97,7 +152,7 @@ std::string rmp::info::to_string() const
 
 rmp::record::record(const std::string& str)
 {
-    _record_data = json11::Json(str).object_items();
+    _record_data = parse_json(str).object_items();
 }
 
 rmp::record::record(const json11::Json& json)
@@ -234,27 +289,9 @@ std::pair<bool,std::string> rmp::client::delete_record(
         record.to_string());
 }
 
-static void write_request_header(
-    int socket,
-    const rmp::request_header * const request_header);
-
-static void write_request_body(
-    int socket,
-    const uint8_t * const request_buffer,
-    size_t request_size);
-
-static void read_response_header(
-    int socket,
-    rmp::response_header * const request_header);
-
-static void read_response_body(
-    int socket,
-    uint8_t * const response_buffer,
-    size_t request_size);
-
 std::pair<bool,std::string> rmp::client::process_request(
     int command_code, 
-    const std::string& body) noexcept
+    const std::string& body)
 {
     rmp::request_header request_header;
     rmp::response_header response_header;
@@ -281,11 +318,12 @@ std::pair<bool,std::string> rmp::client::process_request(
                 _socket,
                 response_body.data(),
                 response_body.size());
-            result.first = (response_header.status_code == rmp::status_codes::OK);
+            result.first = (response_header.status_code 
+                == rmp::status_codes::OK);
             std::move(
                 response_body.begin(),
                 response_body.end(),
-                result.second.begin());
+                std::back_inserter(result.second));
         }
     }
     catch(const std::exception& e)
@@ -299,12 +337,213 @@ std::pair<bool,std::string> rmp::client::process_request(
     return result;
 }
 
+rmp::server::server(uint16_t port, const std::string& root_directory)
+{
+    set_port(port);
+    set_root_directory(root_directory);
+}
+
+rmp::server::~server()
+{
+    if(_running)
+    {
+        stop();
+    }
+}
+
+void rmp::server::set_port(uint16_t port)
+{
+    _port = htons(port);
+}
+
+void rmp::server::set_root_directory(const std::string& root_directory)
+{
+    _root_directory = root_directory;
+}
+
+void rmp::server::start()
+{
+    _listener = socket(PF_INET,SOCK_STREAM,0);
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(_port);
+
+    if(_listener < 0)
+    {
+        throw std::runtime_error("Failed to open socket");
+    }
+
+    if(bind(
+        _listener,
+        reinterpret_cast<sockaddr*>(&addr),
+        sizeof(addr)) < 0)
+    {
+        throw std::runtime_error("Failed to bind socket");
+    }
+
+    if(listen(_listener,100) < 0)
+    {
+        throw std::runtime_error("Failed to listen to socket");
+    }
+}
+
+void rmp::server::run()
+{
+    size_t thread_count = std::max<size_t>(
+        4,std::thread::hardware_concurrency());
+    
+    std::function<void()> server_loop = [&]
+    {
+        int connection;
+        while(_running)
+        {
+            connection = accept(_listener,nullptr,nullptr);
+            if(connection < 0)
+            {
+                _running = false;
+            }
+            else
+            {
+                handle_request(connection);   
+                close(connection);
+            }
+        }
+    };
+    
+    while(_threads.size() < thread_count)
+    {
+        _running = true;   
+        _threads.push_back(
+            std::move(
+                std::thread(
+                    server_loop)));    
+    }
+}
+
+void rmp::server::stop()
+{
+    _running = false;
+    close(_listener);
+}
+
+void rmp::server::handle_request(int socket)
+{
+    rmp::request_header request_header;
+    std::vector<uint8_t> request_body;
+    std::pair<rmp::response_header,std::string> response;
+
+    read_request_header(
+        socket,
+        &request_header);
+
+    request_body.resize(request_header.size);
+    
+    read_request_body(
+        socket,
+        request_body.data(),
+        request_body.size());
+
+    switch (request_header.command_code)
+    {
+        case rmp::command_codes::CREATE:
+            response = on_create(
+                std::string(
+                    reinterpret_cast<char*>(
+                        request_body.data()),
+                    request_body.size()));
+            break;
+        case rmp::command_codes::READ:
+            response = on_read(
+                std::string(
+                    reinterpret_cast<char*>(
+                        request_body.data()),
+                    request_body.size()));
+            break;
+        case rmp::command_codes::UPDATE:
+            response = on_update(
+                std::string(
+                    reinterpret_cast<char*>(
+                        request_body.data()),
+                    request_body.size()));
+            break;
+        case rmp::command_codes::DELETE:
+            response = on_delete(
+                std::string(
+                    reinterpret_cast<char*>(
+                        request_body.data()),
+                    request_body.size()));
+            break;
+        default:
+            response.second = "Invalid command code";
+            response.first.size = response.second.size();
+            response.first.status_code = rmp::status_codes::ERROR;
+            break;
+    }
+
+    write_response_header(socket,&response.first);
+
+    write_response_body(
+        socket,
+        reinterpret_cast<const uint8_t* const>(
+            response.second.data()),
+        response.second.size());
+}
+
+std::pair<rmp::response_header, std::string> rmp::server::on_create(
+    const std::string &request_body)
+{
+
+}
+
+std::pair<rmp::response_header, std::string> rmp::server::on_read(
+    const std::string &request_body)
+{
+    
+}
+
+std::pair<rmp::response_header, std::string> rmp::server::on_update(
+    const std::string &request_body)
+{
+    
+}
+
+std::pair<rmp::response_header, std::string> rmp::server::on_delete(
+    const std::string &request_body)
+{
+    
+}
+
 #define SOCKIO(OP,FD,BUF,LEN,ERROR)                                 \
     if(OP(FD,BUF,LEN) < 0)                                          \
     {                                                               \
         throw(ERROR);                                               \
     }
 
+static void read_request_header(
+    int socket,
+    rmp::request_header * const request_header)
+{
+    SOCKIO(
+        read,
+        socket,
+        request_header,
+        rmp::REQUEST_HEADER_SIZE,
+        "Failed to read request header")
+}
+
+static void read_request_body(
+    int socket,
+    uint8_t * const request_buffer,
+    size_t request_size)
+{
+    SOCKIO(
+        read,
+        socket,
+        request_buffer,
+        request_size,
+        "Failed to read request body")
+}
 
 static void write_request_header(
     int socket,
@@ -354,4 +593,29 @@ static void read_response_body(
         response_buffer,
         response_size,
         "Failed to read response body")
+}
+
+static void write_response_header(
+    int socket,
+    const rmp::response_header * const response_header)
+{
+    SOCKIO(
+        write,
+        socket,
+        response_header,
+        rmp::RESPONSE_HEADER_SIZE,
+        "Failed to write response header")
+}
+
+static void write_response_body(
+    int socket,
+    const uint8_t * const response_buffer,
+    size_t response_size)
+{
+    SOCKIO(
+        write,
+        socket,
+        response_buffer,
+        response_size,
+        "Failed to write response body")   
 }

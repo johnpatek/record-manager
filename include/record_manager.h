@@ -23,15 +23,17 @@
  * 
  *******************************************************************/
 #include <cstdint>
-#include <string>
+#include <algorithm>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <list>
+#include <sstream>
+#include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
-#include <algorithm>
 #include <json11/json11.hpp>
 #if defined(_WIN32)
 #include <Winsock2.h>
@@ -170,7 +172,8 @@ namespace rmp
     private:
         std::pair<bool,std::string> process_request(
             int command_code, 
-            const std::string& body) noexcept;
+            const std::string& body);
+            
         int _socket;
         sockaddr_in _address;
     };
@@ -209,6 +212,7 @@ namespace rmp
         std::pair<response_header,std::string> on_delete(
             const std::string& request_body);
 
+        std::vector<std::thread> _threads;
         uint16_t _port;
         std::string _root_directory;
         bool _running;

@@ -37,7 +37,7 @@ set(PROJ_INCLUDE ${CMAKE_SOURCE_DIR}/include)
 if(WIN32)
 else()
 find_library(JSON11_LIB libjson11.a PATHS ${COMMON_LIB})
-set(CMAKE_CXX_FLAGS  "-std=c++14 -O3")
+set(CMAKE_CXX_FLAGS  "-std=c++14 -O3 -pthread")
 endif()
 
 include_directories(${PROJ_INCLUDE} ${COMMON_INCLUDE})
