@@ -73,6 +73,16 @@ std::string rmp::djb_hash(const std::string& data)
     return hash_string.str();
 }
 
+bool rmp::file_exists(const std::string& path)
+{
+#ifdef _WIN32
+    // TODO: implement for Windows
+#else
+    struct stat buffer;   
+    return (stat (path.c_str(), &buffer) == 0); 
+#endif
+}
+
 static json11::Json parse_json(const char * const buffer)
 {
     std::string error;
@@ -427,6 +437,35 @@ void rmp::server::stop()
     close(_listener);
 }
 
+void rmp::server::aquire_lock(const std::string& hash)
+{
+    while(_bucket_locks.find(hash) != _bucket_locks.end())
+    {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(300));
+    }
+    _bucket_locks.insert(hash);
+}
+
+void rmp::server::release_lock(const std::string& hash)
+{
+    _bucket_locks.erase(hash);
+}
+
+void rmp::server::load_bucket(
+    const std::string & hash, 
+    std::vector<rmp::record>& records)
+{
+    
+}
+
+void rmp::server::store_bucket(
+    const std::string & hash, 
+    const std::vector<rmp::record>& records)
+{
+
+}
+
 void rmp::server::handle_request(int socket)
 {
     rmp::request_header request_header;
@@ -493,6 +532,9 @@ void rmp::server::handle_request(int socket)
 std::pair<rmp::response_header, std::string> rmp::server::on_create(
     const std::string &request_body)
 {
+    rmp::record record(request_body);
+    std::string hash(rmp::djb_hash(record.get_email()));
+    std::vector<rmp::record> bucket;
 
 }
 

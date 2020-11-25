@@ -33,6 +33,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <json11/json11.hpp>
 #if defined(_WIN32)
@@ -53,6 +54,8 @@
 namespace rmp
 {
     std::string djb_hash(const std::string& data);
+
+    bool file_exists(const std::string& path);
 
     class info
     {
@@ -198,6 +201,20 @@ namespace rmp
         void stop();
     
     private:
+        std::unordered_set<std::string> _bucket_locks;
+
+        void aquire_lock(const std::string& hash);
+
+        void release_lock(const std::string& hash);
+
+        void load_bucket(
+            const std::string & hash, 
+            std::vector<record>& records);
+        
+        void store_bucket(
+            const std::string & hash, 
+            const std::vector<record>& records);
+        
         void handle_request(int socket);
 
         std::pair<response_header,std::string> on_create(
