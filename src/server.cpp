@@ -24,6 +24,8 @@
  *******************************************************************/
 #include "record_manager.h"
 
+static bool server_running;
+
 static bool server_init(
     std::shared_ptr<rmp::server>& server,
     int argc, 
@@ -45,11 +47,51 @@ static bool server_init(
     int argc, 
     const char ** argv)
 {
-    return true;
+    bool result(true);
+    std::string error_message;
+    uint16_t remote_port;
+    std::string root_directory;
+
+    result = (argc == 3);
+
+    if(result)
+    {
+        try
+        {
+            remote_port = std::stoi(argv[1]);
+            root_directory = argv[2];
+            server = std::make_shared<rmp::server>(
+                remote_port,
+                root_directory);
+        }
+        catch(const std::exception& e)
+        {
+            error_message = e.what();
+            result = false;
+        }
+    }
+    else
+    {
+        error_message = "3 args expected, " + std::to_string(argc) + " found.";
+    }
+    
+
+    if (!result)
+    {
+        std::cerr << "Failed to parse args: "
+                  << error_message
+                  << std::endl
+                  << "server <port> <root directory>"
+                  << std::endl;
+    }
+
+    return result;
 }
 
 static bool server_main(
     std::shared_ptr<rmp::server>& server) noexcept
 {
+
+    server_running = true;
     return true;
 }

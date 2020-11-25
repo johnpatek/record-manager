@@ -71,7 +71,6 @@ static bool client_init(
     {
         error_message = "3 args expected, " + std::to_string(argc) + " found.";
     }
-    
 
     if (!result)
     {
