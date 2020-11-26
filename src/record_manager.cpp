@@ -254,6 +254,11 @@ void rmp::client::close_connection()
 void rmp::client::set_address(
     const std::string& host, uint16_t port)
 {
+    std::cerr << "Setting host: " << host
+              << std::endl
+              << "Setting port: " << port
+              << std::endl;
+    _address = {0};
     _address.sin_family = AF_INET;
     inet_pton(AF_INET,host.c_str(),&_address.sin_addr.s_addr);
     _address.sin_port = htons(port);
@@ -377,7 +382,7 @@ void rmp::server::start()
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addr.sin_port = htons(_port);
+    addr.sin_port = _port;
 
     if(_listener < 0)
     {
@@ -439,31 +444,88 @@ void rmp::server::stop()
 
 void rmp::server::aquire_lock(const std::string& hash)
 {
-    while(_bucket_locks.find(hash) != _bucket_locks.end())
+    std::unique_lock<std::mutex> lock(
+        _thread_locks_mutex, std::defer_lock);
+    while(_thread_locks.find(hash) != _thread_locks.end())
     {
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(300));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    _bucket_locks.insert(hash);
+    lock.lock();
+    // Aquire thread lock
+    _thread_locks.insert(hash);
+    lock.unlock();
+
 }
 
 void rmp::server::release_lock(const std::string& hash)
 {
-    _bucket_locks.erase(hash);
+    std::unique_lock<std::mutex> lock(
+        _thread_locks_mutex, std::defer_lock);
+    lock.lock();
+    // Release thread lock
+    _thread_locks.erase(hash);
+    lock.unlock();
 }
+
+const size_t BUFFER_SIZE = 1024;
 
 void rmp::server::load_bucket(
     const std::string & hash, 
     std::vector<rmp::record>& records)
 {
-    
+    std::cerr << "loading" << std::endl;
+    std::stringstream json_string;
+    std::array<char,BUFFER_SIZE> read_buffer;
+    json11::Json::array array_data;
+    std::string path(
+        _root_directory + "/" + hash);
+    size_t read_size;
+    if(file_exists(path))
+    {
+        std::fstream bucket_file(
+            path,
+            std::ios::in);
+        
+        while(bucket_file.good())
+        {
+            std::cerr << "reading" << std::endl;
+            bucket_file.read(
+                read_buffer.data(),
+                read_buffer.size());
+            read_size = bucket_file.gcount();
+            json_string.write(
+                read_buffer.data(),
+                read_size);
+        }
+
+        array_data = parse_json(
+            json_string.str()).array_items();
+        
+        records.reserve(array_data.size());
+        for(json11::Json& record_data : array_data)
+        {
+            records.push_back(
+                record_data);
+        }
+    }
 }
 
 void rmp::server::store_bucket(
     const std::string & hash, 
     const std::vector<rmp::record>& records)
 {
+    std::fstream bucket_file(
+        _root_directory + "/" + hash,
+        std::ios::out);
+    json11::Json::array array_data;
+    
+    for(const rmp::record& record : records)
+    {
+        array_data.push_back(
+            record.to_json());
+    }
 
+    bucket_file << json11::Json(array_data).string_value();
 }
 
 void rmp::server::handle_request(int socket)
@@ -483,35 +545,47 @@ void rmp::server::handle_request(int socket)
         request_body.data(),
         request_body.size());
 
+    std::cerr << "command: " << request_header.command_code
+              << "size: " << request_header.size
+              << std::endl;
+    std::cerr.write(
+        reinterpret_cast<const char*>(
+            request_body.data()),
+        request_body.size());
+    std::cerr << std::endl;
     switch (request_header.command_code)
     {
         case rmp::command_codes::CREATE:
             response = on_create(
-                std::string(
-                    reinterpret_cast<char*>(
-                        request_body.data()),
-                    request_body.size()));
+                rmp::record(
+                    std::string(
+                        reinterpret_cast<char*>(
+                            request_body.data()),
+                        request_body.size())));
             break;
         case rmp::command_codes::READ:
             response = on_read(
-                std::string(
-                    reinterpret_cast<char*>(
-                        request_body.data()),
-                    request_body.size()));
+                rmp::record(
+                    std::string(
+                        reinterpret_cast<char*>(
+                            request_body.data()),
+                        request_body.size())));
             break;
         case rmp::command_codes::UPDATE:
             response = on_update(
-                std::string(
-                    reinterpret_cast<char*>(
-                        request_body.data()),
-                    request_body.size()));
+                rmp::record(
+                    std::string(
+                        reinterpret_cast<char*>(
+                            request_body.data()),
+                        request_body.size())));
             break;
         case rmp::command_codes::DELETE:
             response = on_delete(
-                std::string(
-                    reinterpret_cast<char*>(
-                        request_body.data()),
-                    request_body.size()));
+                rmp::record(
+                    std::string(
+                        reinterpret_cast<char*>(
+                            request_body.data()),
+                        request_body.size())));
             break;
         default:
             response.second = "Invalid command code";
@@ -529,31 +603,208 @@ void rmp::server::handle_request(int socket)
         response.second.size());
 }
 
-std::pair<rmp::response_header, std::string> rmp::server::on_create(
-    const std::string &request_body)
+enum request_types
 {
-    rmp::record record(request_body);
-    std::string hash(rmp::djb_hash(record.get_email()));
-    std::vector<rmp::record> bucket;
+    CREATE_RECORD,
+    READ_RECORD,
+    UPDATE_RECORD,
+    DELETE_RECORD
+};
 
+static bool validate_structure(
+    int request_type,
+    const rmp::record& record, 
+    std::string& error);
+
+static std::vector<rmp::record>::iterator find_record(
+    std::vector<rmp::record> bucket, const rmp::record& record);
+
+std::pair<rmp::response_header, std::string> rmp::server::on_create(
+    const rmp::record& request_body)
+{
+    std::string hash;
+    std::vector<rmp::record> bucket;
+    std::pair<rmp::response_header, std::string> result;
+    std::cerr << "validate" <<std::endl;
+    if(validate_structure(
+        request_types::CREATE_RECORD,
+        request_body,
+        result.second))
+    {
+        result.first.status_code = rmp::status_codes::OK;
+    }
+    else
+    {
+        result.first.status_code = rmp::status_codes::ERROR;
+    }
+    
+    if(result.first.status_code == rmp::status_codes::OK)
+    {
+        hash = request_body.get_email();
+        std::cerr << "lock" << std::endl;
+        aquire_lock(hash);
+        std::cerr << "load" << std::endl;
+        load_bucket(hash,bucket);
+        std::cerr << "find" << std::endl;
+        if(find_record(bucket,request_body) == bucket.end())
+        {
+            bucket.push_back(request_body);
+            std::cerr << "store" << std::endl;
+            store_bucket(hash,bucket);
+        }
+        else
+        {
+            result.first.status_code = rmp::status_codes::ERROR;
+            result.second = "Record already exists.";
+        }
+        std::cerr << "release" << std::endl;
+        release_lock(hash);
+    }
+    
+    result.first.size = result.second.size();
+    return result;
 }
 
 std::pair<rmp::response_header, std::string> rmp::server::on_read(
-    const std::string &request_body)
+    const rmp::record& request_body)
 {
+    std::string hash;
+    std::vector<rmp::record> bucket;
+    std::pair<rmp::response_header, std::string> result;
+    std::vector<rmp::record>::iterator record;
+
+    if(validate_structure(
+        request_types::READ_RECORD,
+        request_body,
+        result.second))
+    {
+        result.first.status_code = rmp::status_codes::OK;
+    }
+    else
+    {
+        result.first.status_code = rmp::status_codes::ERROR;
+    }
     
+    if(result.first.status_code == rmp::status_codes::OK)
+    {
+        hash = request_body.get_email();
+        aquire_lock(hash);
+        load_bucket(hash,bucket);
+        record = find_record(bucket,request_body);
+        if(record != bucket.end())
+        {
+            result.second = record->to_string();
+        }
+        else
+        {
+            result.first.status_code = rmp::status_codes::ERROR;   
+            result.second = "Record does not exist.";
+        }
+        release_lock(hash);
+    }
+    
+    result.first.size = result.second.size();
+    return result;
 }
 
 std::pair<rmp::response_header, std::string> rmp::server::on_update(
-    const std::string &request_body)
+    const rmp::record& request_body)
 {
+    std::string hash;
+    std::vector<rmp::record> bucket;
+    std::pair<rmp::response_header, std::string> result;
+    std::vector<rmp::record>::iterator record;
+    rmp::info record_info,new_info;
+
+    if(validate_structure(
+        request_types::UPDATE_RECORD,
+        request_body,
+        result.second))
+    {
+        result.first.status_code = rmp::status_codes::OK;
+    }
+    else
+    {
+        result.first.status_code = rmp::status_codes::ERROR;
+    }
     
+    if(result.first.status_code == rmp::status_codes::OK)
+    {
+        hash = request_body.get_email();
+        new_info = request_body.get_info();
+        aquire_lock(hash);
+        load_bucket(hash,bucket);
+        record = find_record(bucket,request_body);
+        record_info = record->get_info();
+        if(record != bucket.end())
+        {
+            if(new_info.has_name())
+            {
+                record_info.set_name(
+                    new_info.get_name());
+            }
+
+            if(new_info.has_phone())
+            {
+                record_info.set_phone(
+                    new_info.get_phone());
+            }
+
+            record->set_info(record_info);
+        }
+        else
+        {
+            result.first.status_code = rmp::status_codes::ERROR;   
+            result.second = "Record does not exist.";
+        }
+        release_lock(hash);
+    }
+    
+    result.first.size = result.second.size();
+    return result;
 }
 
 std::pair<rmp::response_header, std::string> rmp::server::on_delete(
-    const std::string &request_body)
+    const rmp::record& request_body)
 {
+    std::string hash;
+    std::vector<rmp::record> bucket;
+    std::pair<rmp::response_header, std::string> result;
+    std::vector<rmp::record>::iterator record;
+
+    if(validate_structure(
+        request_types::DELETE_RECORD,
+        request_body,
+        result.second))
+    {
+        result.first.status_code = rmp::status_codes::OK;
+    }
+    else
+    {
+        result.first.status_code = rmp::status_codes::ERROR;
+    }
     
+    if(result.first.status_code == rmp::status_codes::OK)
+    {
+        hash = request_body.get_email();
+        aquire_lock(hash);
+        load_bucket(hash,bucket);
+        record = find_record(bucket,request_body);
+        if(record != bucket.end())
+        {
+            bucket.erase(record);
+            store_bucket(hash,bucket);
+        }
+        else
+        {
+            result.first.status_code = rmp::status_codes::ERROR;   
+            result.second = "Record does not exist.";
+        }
+        release_lock(hash);
+    }
+    
+    result.first.size = result.second.size();
+    return result;    
 }
 
 #define SOCKIO(OP,FD,BUF,LEN,ERROR)                                 \
@@ -660,4 +911,67 @@ static void write_response_body(
         response_buffer,
         response_size,
         "Failed to write response body")   
+}
+
+static bool validate_structure(
+    int request_type,
+    const rmp::record& record, 
+    std::string& error)
+{
+    bool result;
+
+    result = record.has_email();
+
+    if(!result)
+    {
+        error = "Email required.";
+    }
+
+    if(result 
+        && (request_type == request_types::CREATE_RECORD 
+        || request_type == request_types::UPDATE_RECORD))
+    {
+        rmp::info info;
+        if(record.has_info())
+        {
+            info = record.get_info();
+        }
+        else
+        {
+            result = false;
+            error = "Info required.";
+        }
+
+        if(result && (request_type == request_types::CREATE_RECORD))
+        {
+            result = info.has_name() && info.has_phone();
+            error = (result)?"":"Name and phone required.";
+        }
+
+        if(result && (request_type == request_types::UPDATE_RECORD))
+        {
+            result = info.has_name() || info.has_phone();
+            error = (result)?"":"Name or phone required.";
+        }
+    }
+
+    return result;
+}
+
+static std::vector<rmp::record>::iterator find_record(
+    std::vector<rmp::record> bucket, const rmp::record& record)
+{
+    std::vector<rmp::record>::iterator result,it;
+    result = bucket.end();
+    it = bucket.begin();
+    while(
+        (result == bucket.end()) 
+        && (it != bucket.end()))
+    {
+        if(record.get_email() == it->get_email())
+        {
+            result = it;
+        }
+    }
+    return result;
 }

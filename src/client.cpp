@@ -64,6 +64,7 @@ static bool client_init(
         }
         catch(const std::exception& e)
         {
+            error_message = e.what();
             result = false;
         }
     }
@@ -140,14 +141,14 @@ static bool client_main(
             else
             {
                 std::cerr << "Unrecognized command. " 
-                        << "Enter \"help\" "
-                        << "for more information." 
-                        << std::endl;
+                          << "Enter \"help\" "
+                          << "for more information." 
+                          << std::endl;
             }
         }
         catch(const std::exception& e)
         {
-            std::cerr << e.what() << std::endl;
+            std::cerr << 1 << e.what() << std::endl;
             result = false;
         }
     }

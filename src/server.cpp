@@ -91,7 +91,21 @@ static bool server_init(
 static bool server_main(
     std::shared_ptr<rmp::server>& server) noexcept
 {
-
-    server_running = true;
+    try
+    {
+        server->start();
+        server_running = true;
+        server->run();
+        while(server_running)
+        {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(300));
+        }
+        server->stop();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
     return true;
 }

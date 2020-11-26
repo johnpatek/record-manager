@@ -29,6 +29,8 @@
 #include <iomanip>
 #include <iostream>
 #include <list>
+#include <mutex>
+#include <set>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -201,7 +203,9 @@ namespace rmp
         void stop();
     
     private:
-        std::unordered_set<std::string> _bucket_locks;
+        std::set<std::string> _thread_locks;
+
+        std::mutex _thread_locks_mutex;
 
         void aquire_lock(const std::string& hash);
 
@@ -218,16 +222,16 @@ namespace rmp
         void handle_request(int socket);
 
         std::pair<response_header,std::string> on_create(
-            const std::string& request_body);
+            const record& request_body);
 
         std::pair<response_header,std::string> on_read(
-            const std::string& request_body);
+            const record& request_body);
 
         std::pair<response_header,std::string> on_update(
-            const std::string& request_body);
+            const record& request_body);
 
         std::pair<response_header,std::string> on_delete(
-            const std::string& request_body);
+            const record& request_body);
 
         std::vector<std::thread> _threads;
         uint16_t _port;
