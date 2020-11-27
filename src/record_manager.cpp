@@ -794,6 +794,7 @@ std::pair<rmp::response_header, std::string> rmp::server::on_update(
             }
 
             record->set_info(record_info);
+            store_bucket(hash,bucket);
         }
         else
         {
