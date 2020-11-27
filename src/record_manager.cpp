@@ -132,7 +132,18 @@ bool rmp::info::has_name() const
 
 void rmp::info::set_name(const std::string& name)
 {
-    _info_data.at("name") = name;
+    if(has_name())
+    {
+        _info_data.at("name") = name;
+    }
+    else
+    {
+        _info_data.insert(
+        {
+            "name",
+            name
+        });
+    }
 }
 
 std::string rmp::info::get_phone() const
@@ -147,7 +158,18 @@ bool rmp::info::has_phone() const
 
 void rmp::info::set_phone(const std::string& phone)
 {
-    _info_data.at("phone") = phone;
+    if(has_phone())
+    {
+        _info_data.at("phone") = phone;
+    }
+    else
+    {
+        _info_data.insert(
+        {
+            "phone",
+            phone
+        });
+    }
 }
 
 json11::Json rmp::info::to_json() const
@@ -188,7 +210,18 @@ std::string rmp::record::get_email() const
 
 void rmp::record::set_email(const std::string& email)
 {
-    _record_data.at("email") = email;
+    if(has_email())
+    {
+        _record_data.at("email") = email;
+    }
+    else
+    {
+        _record_data.insert(
+        {
+            "email",
+            email
+        });
+    }
 }
 
 bool rmp::record::has_info() const
@@ -203,7 +236,18 @@ rmp::info rmp::record::get_info() const
 
 void rmp::record::set_info(const rmp::info& data)
 {
-    _record_data.at("info") = data;
+    if(has_info())
+    {
+        _record_data.at("info") = data;
+    }
+    else
+    {
+        _record_data.insert(
+        {
+            "info",
+            data
+        });
+    }
 }
 
 json11::Json rmp::record::to_json() const
@@ -239,6 +283,7 @@ void rmp::client::open_connection()
         reinterpret_cast<const sockaddr*>(&_address),
         sizeof(_address)) < 0)
     {
+        close(_socket);
         throw std::runtime_error("Failed to connect socket");
     }
 }
@@ -254,11 +299,6 @@ void rmp::client::close_connection()
 void rmp::client::set_address(
     const std::string& host, uint16_t port)
 {
-    std::cerr << "Setting host: " << host
-              << std::endl
-              << "Setting port: " << port
-              << std::endl;
-    _address = {0};
     _address.sin_family = AF_INET;
     inet_pton(AF_INET,host.c_str(),&_address.sin_addr.s_addr);
     _address.sin_port = htons(port);
@@ -314,11 +354,13 @@ std::pair<bool,std::string> rmp::client::process_request(
     std::pair<bool,std::string> result;
     
     request_header.command_code = command_code;
+    request_header.size = body.size();
 
     open_connection();
 
     try
     {
+        result.first = true;
         write_request_header(_socket,&request_header);
         write_request_body(
             _socket,
@@ -525,7 +567,7 @@ void rmp::server::store_bucket(
             record.to_json());
     }
 
-    bucket_file << json11::Json(array_data).string_value();
+    bucket_file << json11::Json(array_data).dump();
 }
 
 void rmp::server::handle_request(int socket)
@@ -545,14 +587,12 @@ void rmp::server::handle_request(int socket)
         request_body.data(),
         request_body.size());
 
-    std::cerr << "command: " << request_header.command_code
-              << "size: " << request_header.size
-              << std::endl;
     std::cerr.write(
         reinterpret_cast<const char*>(
             request_body.data()),
         request_body.size());
     std::cerr << std::endl;
+
     switch (request_header.command_code)
     {
         case rmp::command_codes::CREATE:
@@ -640,7 +680,8 @@ std::pair<rmp::response_header, std::string> rmp::server::on_create(
     
     if(result.first.status_code == rmp::status_codes::OK)
     {
-        hash = request_body.get_email();
+        hash = rmp::djb_hash(
+            request_body.get_email());
         std::cerr << "lock" << std::endl;
         aquire_lock(hash);
         std::cerr << "load" << std::endl;
@@ -687,7 +728,8 @@ std::pair<rmp::response_header, std::string> rmp::server::on_read(
     
     if(result.first.status_code == rmp::status_codes::OK)
     {
-        hash = request_body.get_email();
+        hash = rmp::djb_hash(
+            request_body.get_email());
         aquire_lock(hash);
         load_bucket(hash,bucket);
         record = find_record(bucket,request_body);
@@ -730,7 +772,8 @@ std::pair<rmp::response_header, std::string> rmp::server::on_update(
     
     if(result.first.status_code == rmp::status_codes::OK)
     {
-        hash = request_body.get_email();
+        hash = rmp::djb_hash(
+            request_body.get_email());
         new_info = request_body.get_info();
         aquire_lock(hash);
         load_bucket(hash,bucket);
@@ -786,7 +829,8 @@ std::pair<rmp::response_header, std::string> rmp::server::on_delete(
     
     if(result.first.status_code == rmp::status_codes::OK)
     {
-        hash = request_body.get_email();
+        hash = rmp::djb_hash(
+            request_body.get_email());
         aquire_lock(hash);
         load_bucket(hash,bucket);
         record = find_record(bucket,request_body);
