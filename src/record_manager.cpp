@@ -1003,6 +1003,7 @@ static std::vector<rmp::record>::iterator find_record(
         {
             result = it;
         }
+        it++;
     }
     return result;
 }
