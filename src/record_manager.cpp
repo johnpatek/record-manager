@@ -226,6 +226,9 @@ void rmp::record::set_email(const std::string& email)
 
 bool rmp::record::has_info() const
 {
+    std::cerr << "finding info in: " 
+              << this->to_string()
+              << std::endl;
     return _record_data.find("info") != _record_data.end();
 }
 
@@ -236,18 +239,7 @@ rmp::info rmp::record::get_info() const
 
 void rmp::record::set_info(const rmp::info& data)
 {
-    if(has_info())
-    {
-        _record_data.at("info") = data;
-    }
-    else
-    {
-        _record_data.insert(
-        {
-            "info",
-            data
-        });
-    }
+    _record_data["info"] = data.to_json();   
 }
 
 json11::Json rmp::record::to_json() const
@@ -570,6 +562,11 @@ void rmp::server::store_bucket(
     bucket_file << json11::Json(array_data).dump();
 }
 
+static bool validate_structure(
+    int request_type,
+    const rmp::record& record, 
+    std::string& error);
+
 void rmp::server::handle_request(int socket)
 {
     rmp::request_header request_header;
@@ -586,12 +583,6 @@ void rmp::server::handle_request(int socket)
         socket,
         request_body.data(),
         request_body.size());
-
-    std::cerr.write(
-        reinterpret_cast<const char*>(
-            request_body.data()),
-        request_body.size());
-    std::cerr << std::endl;
 
     switch (request_header.command_code)
     {
@@ -651,11 +642,6 @@ enum request_types
     DELETE_RECORD
 };
 
-static bool validate_structure(
-    int request_type,
-    const rmp::record& record, 
-    std::string& error);
-
 static std::vector<rmp::record>::iterator find_record(
     std::vector<rmp::record> bucket, const rmp::record& record);
 
@@ -682,15 +668,11 @@ std::pair<rmp::response_header, std::string> rmp::server::on_create(
     {
         hash = rmp::djb_hash(
             request_body.get_email());
-        std::cerr << "lock" << std::endl;
         aquire_lock(hash);
-        std::cerr << "load" << std::endl;
         load_bucket(hash,bucket);
-        std::cerr << "find" << std::endl;
         if(find_record(bucket,request_body) == bucket.end())
         {
             bucket.push_back(request_body);
-            std::cerr << "store" << std::endl;
             store_bucket(hash,bucket);
         }
         else
@@ -698,7 +680,6 @@ std::pair<rmp::response_header, std::string> rmp::server::on_create(
             result.first.status_code = rmp::status_codes::ERROR;
             result.second = "Record already exists.";
         }
-        std::cerr << "release" << std::endl;
         release_lock(hash);
     }
     
@@ -778,22 +759,25 @@ std::pair<rmp::response_header, std::string> rmp::server::on_update(
         aquire_lock(hash);
         load_bucket(hash,bucket);
         record = find_record(bucket,request_body);
-        record_info = record->get_info();
+        
         if(record != bucket.end())
         {
+            record_info = record->get_info();
+            std::cerr << record_info.to_string() << std::endl;
             if(new_info.has_name())
             {
                 record_info.set_name(
                     new_info.get_name());
             }
-
+            
             if(new_info.has_phone())
             {
                 record_info.set_phone(
                     new_info.get_phone());
             }
-
+            std::cerr << record_info.to_string() << std::endl;
             record->set_info(record_info);
+            std::cerr << "info set" << std::endl;
             store_bucket(hash,bucket);
         }
         else
@@ -837,7 +821,9 @@ std::pair<rmp::response_header, std::string> rmp::server::on_delete(
         record = find_record(bucket,request_body);
         if(record != bucket.end())
         {
+            std::cerr << "found" << std::endl;
             bucket.erase(record);
+            std::cerr << "erased" << std::endl;
             store_bucket(hash,bucket);
         }
         else
