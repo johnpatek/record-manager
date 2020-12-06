@@ -24,7 +24,23 @@
  *******************************************************************/
 #include "record_manager.h"
 
-static bool server_running;
+#ifdef _WIN32
+static bool running;
+static BOOL WINAPI console_ctrl_handler(DWORD dwCtrlType)
+{
+  running = false;
+  return TRUE;
+}
+#else
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+void signal_handler(int signal)
+{
+
+}
+#endif
 
 static bool server_init(
     std::shared_ptr<rmp::server>& server,
@@ -88,19 +104,21 @@ static bool server_init(
     return result;
 }
 
+#ifdef _WIN32
+
+#else
 static bool server_main(
     std::shared_ptr<rmp::server>& server) noexcept
 {
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = signal_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT,&sigIntHandler,nullptr);
     try
     {
         server->start();
-        server_running = true;
-        server->run();
-        while(server_running)
-        {
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(300));
-        }
+        pause();
         server->stop();
     }
     catch(const std::exception& e)
@@ -109,3 +127,4 @@ static bool server_main(
     }
     return true;
 }
+#endif
