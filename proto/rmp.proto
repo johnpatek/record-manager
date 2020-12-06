@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package rmp;
+
+message info
+{
+    string name = 1;
+    string phone = 2;
+}
+
+message record
+{
+    string email = 1;
+    info contact = 2;
+}
+
+message bucket
+{
+    repeated record records = 1;
+}
+
+enum command_codes
+{
+    CREATE = 0;
+    READ = 1;
+    UPDATE = 2;
+    DELETE = 3;
+}
+
+message request
+{
+    uint32 command = 1;
+    record payload = 2;
+}
+
+enum status_codes
+{
+    GOOD = 0;
+    BAD = 1;
+}
+
+message response
+{
+    uint32 status = 1;
+    string payload = 2;
+}
