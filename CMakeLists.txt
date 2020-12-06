@@ -38,7 +38,6 @@ set(OBJ_INCLUDE ${CMAKE_SOURCE_DIR}/objects)
 
 if(WIN32)
 else()
-  find_library(JSON11_LIB libjson11.a PATHS ${COMMON_LIB})
   find_library(PROTOBUF_LIB libprotobuf.a PATHS ${COMMON_LIB})
   set(CMAKE_CXX_FLAGS  "-std=c++14 -O3 -pthread -Wall")
 endif()
