@@ -347,6 +347,12 @@ void rmp::server::handle_request(int socket)
             break;
         }
     }
+    else
+    {
+        response.set_status(
+            rmp::status_codes::BAD);
+        *response.mutable_payload() = error_message;
+    }
     write_response(socket,response);
 }
 

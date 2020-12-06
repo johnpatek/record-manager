@@ -36,7 +36,7 @@ def build_common(rebuild : bool):
     if(not(os.path.exists(COMMON_BUILD))):
         os.mkdir(COMMON_BUILD)
     os.chdir(COMMON_BUILD)
-    subprocess.run(['cmake','..'])
+    subprocess.run(['cmake','..','-Dprotobuf_BUILD_TESTS=OFF'])
     subprocess.run(MAKE_INSTALL)
     os.chdir('..')
     os.chdir('..')
