@@ -168,15 +168,19 @@ static void create_command(
     std::shared_ptr<rmp::client>& client)
 {
     std::string email,name,phone;
+    rmp::info info;
     std::pair<bool,std::string> result;
 
     email = get_input("email");
     name = get_input("name");
     phone = get_input("phone");
 
+    info.set_name(name);
+    info.set_phone(phone);
+
     result = client->create_record(
         email,
-        rmp::info(name,phone));
+        info);
 
     if(!result.first)
     {
@@ -191,17 +195,31 @@ static void read_command(
 {
     std::string email;
     std::pair<bool,std::string> result;
+    rmp::record record;
 
     email = get_input("email");
 
     result = client->read_record(email);
 
-    if(!result.first)
+    if(result.first)
     {
-        std::cerr << "Error: ";
+        record.ParseFromString(result.second);
+        std::cerr << "Record: "
+                  << std::endl 
+                  << "email: " 
+                  << record.email() 
+                  << std::endl  
+                  << "name: " 
+                  << record.mutable_contact()->name() 
+                  << std::endl
+                  << "phone: " 
+                  << record.mutable_contact()->phone() 
+                  << std::endl;
     }
-    
-    std::cerr << result.second << std::endl;
+    else
+    {
+        std::cerr << "Error: " << result.second << std::endl;
+    }
 }
 
 static void update_command(

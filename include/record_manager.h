@@ -37,7 +37,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <json11/json11.hpp>
 #if defined(_WIN32)
 #include <Winsock2.h>
 #include <ws2tcpip.h>
@@ -51,105 +50,11 @@
 #include <unistd.h>
 #include <errno.h>
 #endif
-
+#include "rmp.pb.h"
 
 namespace rmp
 {
     std::string djb_hash(const std::string& data);
-
-    bool file_exists(const std::string& path);
-
-    class info
-    {
-    public:
-        info() = default;
-
-        info(const std::string& str);
-
-        info(const json11::Json& json);
-
-        info(
-            const std::string& name,
-            const std::string& phone);
-        
-        std::string get_name() const;
-
-        bool has_name() const;
-
-        void set_name(const std::string& name);
-
-        std::string get_phone() const;
-
-        bool has_phone() const;
-
-        void set_phone(const std::string& phone);
-
-        json11::Json to_json() const;
-
-        std::string to_string() const;
-
-    private:
-        json11::Json::object _info_data;
-    };
-
-    class record
-    {
-    public:
-        record() = default;
-
-        record(const std::string& str);
-
-        record(const json11::Json& json);
-
-        record(const std::string& email, const info& data);
-
-        bool has_email() const;
-
-        std::string get_email() const;
-
-        void set_email(const std::string& email);
-
-        bool has_info() const;
-
-        info get_info() const;
-
-        void set_info(const info& data);
-    
-        json11::Json to_json() const;
-
-        std::string to_string() const;
-
-    private:
-        json11::Json::object _record_data;
-    };
-    
-    enum command_codes
-    {
-        CREATE,
-        READ,
-        UPDATE,
-        DELETE
-    };
-
-    struct request_header
-    {
-        uint8_t command_code;
-        uint8_t pad0,pad1,pad2;
-        uint32_t size;
-    };
-
-    enum status_codes
-    {
-        OK,
-        ERROR
-    };
-
-    struct response_header
-    {
-        uint8_t status_code;
-        uint8_t pad0,pad1,pad2;
-        uint32_t size;
-    };
 
     class client
     {
@@ -176,8 +81,8 @@ namespace rmp
 
     private:
         std::pair<bool,std::string> process_request(
-            int command_code, 
-            const std::string& body);
+            int command,
+            const record& record);
             
         int _socket;
         sockaddr_in _address;
@@ -212,26 +117,26 @@ namespace rmp
         void release_lock(const std::string& hash);
 
         void load_bucket(
-            const std::string & hash, 
-            std::vector<record>& records);
+            const std::string& hash, 
+            bucket& bucket);
         
         void store_bucket(
-            const std::string & hash, 
-            const std::vector<record>& records);
+            const std::string& hash, 
+            const bucket& bucket);
         
         void handle_request(int socket);
 
-        std::pair<response_header,std::string> on_create(
-            const record& request_body);
+        response on_create(
+            const record& record);
 
-        std::pair<response_header,std::string> on_read(
-            const record& request_body);
+        response on_read(
+            const record& record);
 
-        std::pair<response_header,std::string> on_update(
-            const record& request_body);
+        response on_update(
+            const record& record);
 
-        std::pair<response_header,std::string> on_delete(
-            const record& request_body);
+        response on_delete(
+            const record& record);
 
         std::vector<std::thread> _threads;
         uint16_t _port;
@@ -239,7 +144,4 @@ namespace rmp
         bool _running;
         int _listener;
     };
-
-    const size_t RESPONSE_HEADER_SIZE = sizeof(response_header);
-    const size_t REQUEST_HEADER_SIZE = sizeof(request_header);
 }
