@@ -57,7 +57,7 @@ target_include_directories(server PUBLIC ${PROJ_INCLUDE} ${COMMON_INCLUDE} ${OBJ
 target_include_directories(unittest PUBLIC ${PROJ_INCLUDE} ${COMMON_INCLUDE} ${OBJ_INCLUDE})
 
 target_link_libraries(rmp-obj ${PROTOBUF_LIB})
-target_link_libraries(rmp rmp-obj)
-target_link_libraries(client rmp)
-target_link_libraries(server rmp)
-target_link_libraries(unittest rmp)
+target_link_libraries(rmp rmp-obj ${PROTOBUF_LIB})
+target_link_libraries(client rmp ${PROTOBUF_LIB})
+target_link_libraries(server rmp ${PROTOBUF_LIB})
+target_link_libraries(unittest rmp ${PROTOBUF_LIB})
