@@ -1,5 +1,7 @@
 # Record Manager
 
+[![Build Status](https://travis-ci.com/johnpatek/record-manager.svg?branch=master)](https://travis-ci.com/johnpatek/record-manager)
+
 Start the server application:
 ```shell
 mkdir /home/ubuntu/records
