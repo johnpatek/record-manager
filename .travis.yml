@@ -1,11 +1,5 @@
 language: cpp
 
-dist:
-  - trusty
-  - precise
-  - xenial
-  - bionic
-
 script:
   - sudo apt install -y python3 cmake
   - python3 cmake.py --common
