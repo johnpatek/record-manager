@@ -4,3 +4,6 @@
 [submodule "common/protobuf"]
 	path = common/protobuf
 	url = https://github.com/protocolbuffers/protobuf
+[submodule "common/libuv"]
+	path = common/libuv
+	url = https://github.com/johnpatek/libuv

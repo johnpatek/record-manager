@@ -29,6 +29,11 @@ static bool validate_request(
     const rmp::request& request, 
     std::string& error_message);
 
+static void allocate_buffer(
+    uv_handle_t *handle, 
+    size_t suggested_size, 
+    uv_buf_t *buf);
+
 static int find_record(
     const rmp::bucket bucket, const rmp::record& record);
 
@@ -44,13 +49,9 @@ std::string rmp::djb_hash(const std::string& data)
     return hash_string.str();
 }
 
-static void read_request(int socket, rmp::request& request);
-
 static void write_request(int socket, const rmp::request& request);
 
 static void read_response(int socket, rmp::response& response);
-
-static void write_response(int socket, const rmp::response& response);
 
 rmp::client::client(const std::string& host, uint16_t port)
 {
@@ -180,21 +181,23 @@ std::pair<bool,std::string> rmp::client::process_request(
 
 rmp::server::server(uint16_t port, const std::string& root_directory)
 {
+    _loop = std::shared_ptr<uv_loop_t>(uv_default_loop(),[](uv_loop_t * loop)
+    {
+        uv_loop_close(loop);
+    });
     set_port(port);
     set_root_directory(root_directory);
+    _loop->data = this;
 }
 
 rmp::server::~server()
 {
-    if(_running)
-    {
-        stop();
-    }
+
 }
 
 void rmp::server::set_port(uint16_t port)
 {
-    _port = htons(port);
+    _port = port;
 }
 
 void rmp::server::set_root_directory(const std::string& root_directory)
@@ -204,68 +207,121 @@ void rmp::server::set_root_directory(const std::string& root_directory)
 
 void rmp::server::start()
 {
-    _listener = socket(PF_INET,SOCK_STREAM,0);
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addr.sin_port = _port;
-
-    if(_listener < 0)
-    {
-        throw std::runtime_error("Failed to open socket");
-    }
-
-    if(bind(
-        _listener,
-        reinterpret_cast<sockaddr*>(&addr),
-        sizeof(addr)) < 0)
-    {
-        throw std::runtime_error("Failed to bind socket");
-    }
-
-    if(listen(_listener,100) < 0)
-    {
-        throw std::runtime_error("Failed to listen to socket");
-    }
-
-    size_t thread_count = std::max<size_t>(
-        4,std::thread::hardware_concurrency());
+    uv_signal_init(_loop.get(),&_signal);
+    uv_signal_start(
+        &_signal,
+        uv_signal_callback,
+        SIGINT);
     
-    _running = true;
-
-    while(_threads.size() < thread_count)
+    sockaddr_in addr;
+    uv_ip4_addr("0.0.0.0", _port, &addr);
+    uv_tcp_init(_loop.get(), &_handle);
+    uv_tcp_bind(
+        &_handle,
+        reinterpret_cast<const sockaddr*>(&addr), 0);
+    if(uv_listen(
+        reinterpret_cast<uv_stream_t*>(&_handle),
+        100,uv_new_connection_callback) > 0)
     {
-        _threads.push_back(std::thread([this]
-        {
-            this->run();
-        }));
-        _threads.back().detach();
+        throw std::runtime_error("Failed to listen");
     }
-}
-
-void rmp::server::run()
-{
-    int connection;
-    bool loop(true);
-    while(loop)
-    {
-        connection = accept(_listener,nullptr,nullptr);
-        if(connection < 0)
-        {
-            loop = false;
-        }
-        else
-        {
-            handle_request(connection);   
-            close(connection);
-        }
-    }
+    uv_run(_loop.get(),UV_RUN_DEFAULT);
 }
 
 void rmp::server::stop()
 {
-    close(_listener);
-    _running = false;
+
+}
+
+void rmp::server::uv_read_callback(
+    uv_stream_t *client, 
+    ssize_t nread, 
+    const uv_buf_t *buf)
+{
+    rmp::server * server = reinterpret_cast<rmp::server*>(
+        client->loop->data);
+    rmp::request request;
+    rmp::response response;
+    std::string response_buffer;
+    uv_buf_t wrbuf;
+    uv_write_t * req = new uv_write_t;
+    
+    if (nread < 0) 
+    {
+        if (nread != UV_EOF) 
+        {
+            fprintf(stderr, "Read error %s\n", uv_err_name(nread));
+            uv_close((uv_handle_t*) client, NULL);
+        }
+    } 
+    else if (nread > 0) 
+    {
+        request.ParseFromArray(buf->base,nread);
+        server->handle_request(request,response);
+        response_buffer = response.SerializeAsString();
+        wrbuf = uv_buf_init(
+            const_cast<char*>(
+                response_buffer.c_str()), 
+            response_buffer.size());
+        req->data = client;
+        uv_write(req, client, &wrbuf, 1, uv_write_callback);
+    }
+
+    if (buf->base) 
+    {
+        free(buf->base);
+    }
+}
+
+void rmp::server::uv_write_callback(
+    uv_write_t *req, 
+    int status)
+{
+    uv_close(reinterpret_cast<uv_handle_t*>(
+        req->data),0);
+    delete reinterpret_cast<uv_handle_t*>(
+        req->data);    
+    delete req;
+}
+
+void rmp::server::uv_new_connection_callback(
+    uv_stream_t *server, 
+    int status)
+{
+    uv_tcp_t* client = new uv_tcp_t;
+    uv_tcp_init(server->loop,client);
+    if(uv_accept(
+        server,
+        reinterpret_cast<uv_stream_t*>(client)) == 0)
+    {
+        uv_read_start(
+            reinterpret_cast<uv_stream_t*>(client),
+            allocate_buffer,
+            uv_read_callback);
+    }
+    else
+    {
+        uv_close(
+            reinterpret_cast<uv_handle_t*>(client),0);
+    }
+    
+}
+
+void rmp::server::uv_signal_callback(
+    uv_signal_t *handle, 
+    int signum)
+{
+    int result = uv_loop_close(handle->loop);
+    if (result == UV_EBUSY)
+    {
+        uv_walk(handle->loop, uv_walk_callback, NULL);
+    }
+}
+
+void rmp::server::uv_walk_callback(
+    uv_handle_t* handle, void* arg)
+{
+    uv_close(handle,0);
 }
 
 void rmp::server::aquire_lock(const std::string& hash)
@@ -321,12 +377,11 @@ void rmp::server::store_bucket(
         &bucket_stream);
 }
 
-void rmp::server::handle_request(int socket)
+void rmp::server::handle_request(
+    const rmp::request& request,
+    rmp::response& response)
 {
-    rmp::request request;
-    rmp::response response;
     std::string error_message;
-    read_request(socket,request);
     if(validate_request(request,error_message))
     {
         switch (request.command())
@@ -353,7 +408,6 @@ void rmp::server::handle_request(int socket)
             rmp::status_codes::BAD);
         *response.mutable_payload() = error_message;
     }
-    write_response(socket,response);
 }
 
 rmp::response rmp::server::on_create(
@@ -496,27 +550,6 @@ static int find_record(
 
 const size_t READ_BUFFER_SIZE = 1024;
 
-static void read_request(int socket, rmp::request& request)
-{
-    std::vector<uint8_t> request_buffer;
-    std::array<uint8_t,READ_BUFFER_SIZE> read_buffer;
-    size_t read_size;
-    do
-    {
-        read_size = read(
-            socket,
-            read_buffer.data(),
-            read_buffer.size());
-        request_buffer.insert(
-            request_buffer.end(),
-            read_buffer.begin(),
-            read_buffer.begin() + read_size);
-    } while (read_size == 1024);
-    request.ParseFromArray(
-        request_buffer.data(),
-        request_buffer.size());
-}
-
 static void write_request(int socket, const rmp::request& request)
 {
     request.SerializeToFileDescriptor(socket);
@@ -538,12 +571,21 @@ static void read_response(int socket, rmp::response& response)
             read_buffer.begin(),
             read_buffer.begin() + read_size);
     } while (read_size == 1024);
-    response.ParseFromArray(
-        response_buffer.data(),
-        response_buffer.size());
+    if(response_buffer.size() > 0)
+    {
+        response.ParseFromArray(
+            response_buffer.data(),
+            response_buffer.size());
+    }
 }
 
-static void write_response(int socket, const rmp::response& response)
+static void allocate_buffer(
+    uv_handle_t *handle, 
+    size_t suggested_size, 
+    uv_buf_t *buf)
 {
-    response.SerializeToFileDescriptor(socket);
+    buf->base = reinterpret_cast<char*>(
+        malloc(
+            suggested_size));
+    buf->len = suggested_size;
 }
