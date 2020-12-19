@@ -37,6 +37,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <uv.h>
 #if defined(_WIN32)
 #include <Winsock2.h>
 #include <ws2tcpip.h>
@@ -123,8 +124,30 @@ namespace rmp
         void store_bucket(
             const std::string& hash, 
             const bucket& bucket);
-        
-        void handle_request(int socket);
+
+        static void uv_read_callback(
+            uv_stream_t *client, 
+            ssize_t nread, 
+            const uv_buf_t *buf);
+
+        static void uv_write_callback(
+            uv_write_t *req, 
+            int status);
+
+        static void uv_new_connection_callback(
+            uv_stream_t *server, 
+            int status);
+
+        static void uv_signal_callback(
+            uv_signal_t *handle, 
+            int signum);
+
+        static void uv_walk_callback(
+            uv_handle_t* handle, void* arg);    
+
+        void handle_request(
+            const rmp::request& request,
+            rmp::response& response);
 
         response on_create(
             const record& record);
@@ -141,7 +164,8 @@ namespace rmp
         std::vector<std::thread> _threads;
         uint16_t _port;
         std::string _root_directory;
-        bool _running;
-        int _listener;
+        std::shared_ptr<uv_loop_t> _loop;
+        uv_tcp_t _handle;
+        uv_signal_t _signal;
     };
 }

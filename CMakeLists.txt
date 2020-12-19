@@ -39,6 +39,8 @@ set(OBJ_INCLUDE ${CMAKE_SOURCE_DIR}/objects)
 if(WIN32)
 else()
   find_library(PROTOBUF_LIB libprotobuf.a PATHS ${COMMON_LIB})
+  find_library(UV_LIB libuv_a.a PATHS ${COMMON_LIB})
+  set(DL dl)
   set(CMAKE_CXX_FLAGS  "-std=c++14 -O3 -pthread -Wall")
 endif()
 
@@ -57,7 +59,7 @@ target_include_directories(server PUBLIC ${PROJ_INCLUDE} ${COMMON_INCLUDE} ${OBJ
 target_include_directories(unittest PUBLIC ${PROJ_INCLUDE} ${COMMON_INCLUDE} ${OBJ_INCLUDE})
 
 target_link_libraries(rmp-obj ${PROTOBUF_LIB})
-target_link_libraries(rmp rmp-obj ${PROTOBUF_LIB})
+target_link_libraries(rmp rmp-obj ${PROTOBUF_LIB} ${UV_LIB} ${DL})
 target_link_libraries(client rmp ${PROTOBUF_LIB})
 target_link_libraries(server rmp ${PROTOBUF_LIB})
 target_link_libraries(unittest rmp ${PROTOBUF_LIB})

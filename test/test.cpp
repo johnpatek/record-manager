@@ -1,39 +1,68 @@
-/********************************************************************
- * Copyright (c) 2020 John R. Patek
- * 
- * This software is provided 'as-is', without any express or implied 
- * warranty. In no event will the authors be held liable for any 
- * damages arising from the use of this software.
- * 
- * Permission is granted to anyone to use this software for any 
- * purpose, including commercial applications, and to alter it and 
- * redistribute it freely, subject to the following restrictions:
- * 
- *    1. The origin of this software must not be misrepresented; you 
- *       must not claim that you wrote the original software. If you 
- *       use this software in a product, an acknowledgment in the 
- *       product documentation would be appreciated but is not 
- *       required.
- *    
- *    2. Altered source versions must be plainly marked as such, and 
- *       must not be misrepresented as being the original software.
- *    
- *    3. This notice may not be removed or altered from any source 
- *       distribution.
- * 
- *******************************************************************/
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <uv.h>
 
-#include "record_manager.h"
+uv_loop_t *loop;
+struct sockaddr_in addr;
 
+void alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+    buf->base = (char*)malloc(suggested_size);
+    buf->len = suggested_size;
+}
 
-int main(int argc, const char ** argv)
-{
-    rmp::info info;
-    rmp::record record;
-    info.set_name("John");
-    info.set_phone("5555555555");
-    record.set_email("john@email.com");
-    *record.mutable_contact() = info;
-    record.SerializeToOstream(&std::cout);
-    return 0;
+void echo_write(uv_write_t *req, int status) {
+    if (status) {
+        fprintf(stderr, "Write error %s\n", uv_strerror(status));
+    }
+}
+
+void echo_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
+    if (nread < 0) {
+        if (nread != UV_EOF) {
+            fprintf(stderr, "Read error %s\n", uv_err_name(nread));
+            uv_close((uv_handle_t*) client, NULL);
+        }
+    } else if (nread > 0) {
+        uv_write_t req;
+        uv_buf_t wrbuf = uv_buf_init(buf->base, nread);
+        uv_write(&req, client, &wrbuf, 1, echo_write);
+    }
+
+    if (buf->base) {
+        free(buf->base);
+    }
+}
+
+void on_new_connection(uv_stream_t *server, int status) {
+    if (status < 0) {
+        fprintf(stderr, "New connection error %s\n", uv_strerror(status));
+        return;
+    }
+
+    uv_tcp_t * client = (uv_tcp_t*)malloc(sizeof(uv_tcp_t));
+    uv_tcp_init(loop, client);
+    if (uv_accept(server, (uv_stream_t*) client) == 0) {
+        uv_read_start((uv_stream_t*)client, alloc_buffer, echo_read);
+    } else {
+        uv_close((uv_handle_t*) client, NULL);
+    }
+}
+
+int main() {
+    loop = uv_default_loop();
+
+    uv_tcp_t server;
+    uv_tcp_init(loop, &server);
+
+    uv_ip4_addr("0.0.0.0", 7000, &addr);
+
+    uv_tcp_bind(&server, (const struct sockaddr*)&addr, 0);
+    int r = uv_listen((uv_stream_t*)&server, 128, on_new_connection);
+    if (r) {
+        fprintf(stderr, "Listen error %s\n", uv_strerror(r));
+        return 1;
+    }
+    return uv_run(loop, UV_RUN_DEFAULT);
 }
