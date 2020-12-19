@@ -161,7 +161,6 @@ namespace rmp
         response on_delete(
             const record& record);
 
-        std::vector<std::thread> _threads;
         uint16_t _port;
         std::string _root_directory;
         std::shared_ptr<uv_loop_t> _loop;

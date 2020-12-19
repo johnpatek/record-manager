@@ -571,9 +571,12 @@ static void read_response(int socket, rmp::response& response)
             read_buffer.begin(),
             read_buffer.begin() + read_size);
     } while (read_size == 1024);
-    response.ParseFromArray(
-        response_buffer.data(),
-        response_buffer.size());
+    if(response_buffer.size() > 0)
+    {
+        response.ParseFromArray(
+            response_buffer.data(),
+            response_buffer.size());
+    }
 }
 
 static void allocate_buffer(
