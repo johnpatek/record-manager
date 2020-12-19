@@ -2,6 +2,12 @@
 
 [![Build Status](https://travis-ci.com/johnpatek/record-manager.svg?branch=master)](https://travis-ci.com/johnpatek/record-manager)
 
+Build:
+```shell
+python3 cmake.py --common
+python3 cmake.py
+```
+
 Start the server application:
 ```shell
 mkdir /home/ubuntu/records
