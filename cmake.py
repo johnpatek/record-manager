@@ -17,6 +17,15 @@ else:
     MAKE_ALL = ['make','all','-j',str(CORES)]
     MAKE_INSTALL = ['make','install','-j',str(CORES)]    
 
+VERSION = sys.version_info.major + (sys.version_info.minor / 10)
+
+def subprocess_run(args):
+    if(VERSION < 3.5):
+        return subprocess.call(args)
+    else:
+        return subprocess.run(args)
+
+
 # Argument parsing
 argument_parser = argparse.ArgumentParser()
 argument_parser.add_argument('-c','--common',action='store_true')
@@ -30,14 +39,14 @@ COMMON_BUILD = os.path.join('common','build')
 
 # build targets
 def build_common(rebuild : bool):
-    subprocess.run(['git','submodule','update','--init','--recursive'])
+    subprocess_run(['git','submodule','update','--init','--recursive'])
     if(rebuild):
         clean_path(COMMON_BUILD) 
     if(not(os.path.exists(COMMON_BUILD))):
         os.mkdir(COMMON_BUILD)
     os.chdir(COMMON_BUILD)
-    subprocess.run(['cmake','..','-Dprotobuf_BUILD_TESTS=OFF'])
-    subprocess.run(MAKE_INSTALL)
+    subprocess_run(['cmake','..','-Dprotobuf_BUILD_TESTS=OFF'])
+    subprocess_run(MAKE_INSTALL)
     os.chdir('..')
     os.chdir('..')
 
@@ -47,8 +56,8 @@ def build_library(rebuild : bool):
     if(not(os.path.exists('build'))):
         os.mkdir('build')
     os.chdir('build')
-    subprocess.run(['cmake','..'])
-    subprocess.run(MAKE_ALL)
+    subprocess_run(['cmake','..'])
+    subprocess_run(MAKE_ALL)
     os.chdir('..')
 
 
