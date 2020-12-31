@@ -39,40 +39,45 @@ COMMON_BUILD = os.path.join('common','build')
 
 # build targets
 def build_common(rebuild : bool):
-    subprocess_run(['git','submodule','update','--init','--recursive'])
+    result = subprocess_run(['git','submodule','update','--init','--recursive'])
     if(rebuild):
         clean_path(COMMON_BUILD) 
     if(not(os.path.exists(COMMON_BUILD))):
         os.mkdir(COMMON_BUILD)
     os.chdir(COMMON_BUILD)
-    subprocess_run(['cmake','..','-Dprotobuf_BUILD_TESTS=OFF'])
-    subprocess_run(MAKE_INSTALL)
+    result = result + subprocess_run(['cmake','..','-Dprotobuf_BUILD_TESTS=OFF'])
+    result = result + subprocess_run(MAKE_INSTALL)
     os.chdir('..')
     os.chdir('..')
+    return result
 
 def build_library(rebuild : bool):
+    result = 0
     if(rebuild):
         clean_path('build')
     if(not(os.path.exists('build'))):
         os.mkdir('build')
     os.chdir('build')
-    subprocess_run(['cmake','..'])
+    result = result + subprocess_run(['cmake','..'])
     subprocess_run(MAKE_ALL)
-    os.chdir('..')
+    result = result + os.chdir('..')
+    return result
 
 
 def build_main():
+    result = 0
     args = argument_parser.parse_args()
     if args.common:
-        build_common(args.rebuild)
+        result = result + build_common(args.rebuild)
     else:
-        build_library(
+        result = result + build_library(
             args.rebuild)
+    return result
 
 if __name__ == '__main__':
     result = 0
     try:
-        build_main()
+        result = build_main()
     except:
         result = 1
         print(sys.exc_info())
