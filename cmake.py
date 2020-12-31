@@ -23,7 +23,7 @@ def subprocess_run(args):
     if(VERSION < 3.5):
         return subprocess.call(args)
     else:
-        return subprocess.run(args)
+        return subprocess.run(args).returncode
 
 
 # Argument parsing
@@ -39,7 +39,8 @@ COMMON_BUILD = os.path.join('common','build')
 
 # build targets
 def build_common(rebuild : bool):
-    result = subprocess_run(['git','submodule','update','--init','--recursive'])
+    result = 0
+    result = result + subprocess_run(['git','submodule','update','--init','--recursive'])
     if(rebuild):
         clean_path(COMMON_BUILD) 
     if(not(os.path.exists(COMMON_BUILD))):
@@ -60,7 +61,7 @@ def build_library(rebuild : bool):
     os.chdir('build')
     result = result + subprocess_run(['cmake','..'])
     subprocess_run(MAKE_ALL)
-    result = result + os.chdir('..')
+    os.chdir('..')
     return result
 
 
