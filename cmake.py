@@ -70,7 +70,10 @@ def build_main():
             args.rebuild)
 
 if __name__ == '__main__':
+    result = 0
     try:
         build_main()
     except:
+        result = 1
         print(sys.exc_info())
+    sys.exit(result)
