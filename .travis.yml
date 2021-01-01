@@ -27,3 +27,4 @@ before_install:
 script:
   - python3 cmake.py --common
   - python3 cmake.py
+  - python3 test.py
