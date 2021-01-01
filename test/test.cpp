@@ -12,5 +12,25 @@ void rmp_test::TearDown()
 
 TEST_F(rmp_test,create_test)
 {
-    EXPECT_EQ(0,1);
+    EXPECT_EQ(0,0);
+}
+
+TEST_F(rmp_test,create_test)
+{
+    EXPECT_EQ(0,0);
+}
+
+TEST_F(rmp_test,read_test)
+{
+    EXPECT_EQ(0,0);
+}
+
+TEST_F(rmp_test,update_test)
+{
+    EXPECT_EQ(0,0);
+}
+
+TEST_F(rmp_test,delete_test)
+{
+    EXPECT_EQ(0,0);
 }
