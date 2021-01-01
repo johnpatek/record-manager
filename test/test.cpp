@@ -15,11 +15,6 @@ TEST_F(rmp_test,create_test)
     EXPECT_EQ(0,0);
 }
 
-TEST_F(rmp_test,create_test)
-{
-    EXPECT_EQ(0,0);
-}
-
 TEST_F(rmp_test,read_test)
 {
     EXPECT_EQ(0,0);
