@@ -1,5 +1,5 @@
 #######################################################################
-# Copyright (c) 2020 John R. Patek
+# Copyright (c) 2021 John R. Patek
 # 
 # This software is provided 'as-is', without any express or implied 
 # warranty. In no event will the authors be held liable for any 
