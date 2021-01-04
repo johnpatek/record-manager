@@ -19,13 +19,15 @@ TEST_F(rmp_test,create_test)
     email = "johnpatek2@gmail.com";
     info.set_name("John");
     info.set_phone("0000000000");
-
+    
+    // Test creating a new record
     result = _client->create_record(
         email,
         info);
 
     EXPECT_TRUE(result.first);
 
+    // Negative test creating a duplicate record
     result = _client->create_record(
         email,
         info);
@@ -35,7 +37,23 @@ TEST_F(rmp_test,create_test)
 
 TEST_F(rmp_test,read_test)
 {
-    EXPECT_EQ(0,0);
+    std::string good,bad;
+    std::pair<bool,std::string> result;
+    
+    good = "johnpatek2@gmail.com";
+    bad = "johnpatek3@gmail.com";
+    
+    // Test reading existing record
+    result = _client->read_record(
+        good);
+
+    EXPECT_TRUE(result.first);
+
+    // Negative test reading nonexistent record
+    result = _client->read_record(
+        bad);
+
+    EXPECT_FALSE(result.first);
 }
 
 TEST_F(rmp_test,update_test)
@@ -45,5 +63,27 @@ TEST_F(rmp_test,update_test)
 
 TEST_F(rmp_test,delete_test)
 {
-    EXPECT_EQ(0,0);
+    std::string good,bad;
+    std::pair<bool,std::string> result;
+    
+    good = "johnpatek2@gmail.com";
+    bad = "johnpatek3@gmail.com";
+    
+    // Test deleting existing record
+    result = _client->delete_record(
+        good);
+
+    EXPECT_TRUE(result.first);
+
+    // Negative test deleting previously deleted record
+    result = _client->delete_record(
+        good);
+
+    EXPECT_FALSE(result.first);
+
+    // Negative test deleting nonexistent record
+    result = _client->delete_record(
+        bad);
+
+    EXPECT_FALSE(result.first);
 }
