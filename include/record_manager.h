@@ -22,6 +22,7 @@
  *       distribution.
  * 
  *******************************************************************/
+#include <array>
 #include <cstdint>
 #include <algorithm>
 #include <fstream>

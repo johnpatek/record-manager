@@ -1,6 +1,30 @@
 language: cpp
 
+jobs:
+  include:
+    - os: linux
+      dist: focal
+      arch: amd64
+    - os: linux
+      dist: bionic
+      arch: amd64
+    - os: linux
+      dist: xenial
+      arch: amd64
+    - os: linux
+      dist: focal
+      arch: arm64
+    - os: linux
+      dist: bionic
+      arch: arm64
+    - os: linux
+      dist: xenial
+      arch: arm64
+      
+before_install:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt install -y python3; fi
+  
 script:
-  - sudo apt install -y python3
   - python3 cmake.py --common
   - python3 cmake.py
+  - python3 test.py
