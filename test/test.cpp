@@ -12,7 +12,25 @@ void rmp_test::TearDown()
 
 TEST_F(rmp_test,create_test)
 {
-    EXPECT_EQ(0,0);
+    std::string email;
+    rmp::info info;
+    std::pair<bool,std::string> result;
+
+    email = "johnpatek2@gmail.com";
+    info.set_name("John");
+    info.set_phone("0000000000");
+
+    result = _client->create_record(
+        email,
+        info);
+
+    EXPECT_TRUE(result.first);
+
+    result = _client->create_record(
+        email,
+        info);
+
+    EXPECT_FALSE(result.first);    
 }
 
 TEST_F(rmp_test,read_test)
