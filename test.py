@@ -5,11 +5,22 @@ import sys
 import subprocess
 import shutil
 import multiprocessing
+import time
+import tempfile
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 VERSION = sys.version_info.major + (sys.version_info.minor / 10)
+TIMESTAMP = str(int(time.time()))
+DATA = os.path.join(tempfile.gettempdir(),'rmp-' + TIMESTAMP)
 
 # System specific settings
 
+WIN = (os.name == 'nt')
+TESTD = [
+    os.path.join('build','server'),
+    str(12345),
+    DATA]
 TEST = [os.path.join('build','unittest')]
 
 def subprocess_run(args):
@@ -21,8 +32,15 @@ def subprocess_run(args):
 if __name__ == '__main__':
     result = 0
     try:
-        result = subprocess_run(TEST)
+        os.mkdir(DATA)
+        server = subprocess.Popen(TESTD, stderr=subprocess.PIPE, shell=WIN)
+        eprint('starting server...')
+        time.sleep(1)
+        client = subprocess.Popen(TEST, stderr=subprocess.PIPE, shell=WIN)
+        client.wait()
+        server.kill()
+        shutil.rmtree(DATA,ignore_errors=True)
     except:
         result = 1
-        print(sys.last_traceback)
+        eprint(sys.last_traceback)
     sys.exit(result)
