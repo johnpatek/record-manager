@@ -20,6 +20,7 @@ jobs:
     - os: linux
       dist: xenial
       arch: arm64
+    - os: windows
       
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt install -y python3; fi

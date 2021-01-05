@@ -31,14 +31,14 @@ argument_parser = argparse.ArgumentParser()
 argument_parser.add_argument('-c','--common',action='store_true')
 argument_parser.add_argument('-r','--rebuild',action='store_true')
 
-def clean_path(path : str):
+def clean_path(path):
     if(os.path.exists(path)):
         shutil.rmtree(path)
 
 COMMON_BUILD = os.path.join('common','build')
 
 # build targets
-def build_common(rebuild : bool):
+def build_common(rebuild):
     result = 0
     result = result + subprocess_run(['git','submodule','update','--init','--recursive'])
     if(rebuild):
@@ -52,7 +52,7 @@ def build_common(rebuild : bool):
     os.chdir('..')
     return result
 
-def build_library(rebuild : bool):
+def build_library(rebuild):
     result = 0
     if(rebuild):
         clean_path('build')
