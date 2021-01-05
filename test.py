@@ -7,8 +7,9 @@ import shutil
 import multiprocessing
 import time
 import tempfile
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+def eprint(message):
+        sys.stderr.write(message)
+        sys.stderr.flush()
 
 VERSION = sys.version_info.major + (sys.version_info.minor / 10)
 TIMESTAMP = str(int(time.time()))
