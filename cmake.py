@@ -6,6 +6,10 @@ import subprocess
 import shutil
 import multiprocessing
 
+def eprint(message):
+        sys.stderr.write(message)
+        sys.stderr.flush()
+
 CORES = multiprocessing.cpu_count()
 
 # System specific settings
