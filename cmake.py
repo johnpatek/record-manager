@@ -39,15 +39,24 @@ COMMON_BUILD = os.path.join('common','build')
 
 # build targets
 def build_common(rebuild):
+    eprint(1)
     result = 0
+    eprint(2)
     result = result + subprocess_run(['git','submodule','update','--init','--recursive'])
+    eprint(3)
     if(rebuild):
+        eprint(4)
         clean_path(COMMON_BUILD) 
     if(not(os.path.exists(COMMON_BUILD))):
+        eprint(5)
         os.mkdir(COMMON_BUILD)
+    eprint(6)
     os.chdir(COMMON_BUILD)
+    eprint(7)
     result = result + subprocess_run(['cmake','..','-Dprotobuf_BUILD_TESTS=OFF'])
+    eprint(8)
     result = result + subprocess_run(MAKE_INSTALL)
+    eprint(9)
     os.chdir('..')
     os.chdir('..')
     return result
@@ -82,5 +91,4 @@ if __name__ == '__main__':
     except:
         result = 1
         print(sys.exc_info())
-        print(sys.call_tracing())
     sys.exit(result)
