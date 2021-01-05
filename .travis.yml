@@ -26,6 +26,6 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt install -y python3; fi
   
 script:
-  - python3 cmake.py --common
-  - python3 cmake.py
-  - python3 test.py
+  - python cmake.py --common
+  - python cmake.py
+  - python test.py
