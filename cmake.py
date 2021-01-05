@@ -82,5 +82,5 @@ if __name__ == '__main__':
     except:
         result = 1
         print(sys.exc_info())
-        print(sys.last_traceback())
+        print(sys.call_tracing())
     sys.exit(result)
