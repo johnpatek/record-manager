@@ -21,10 +21,10 @@ message bucket
 
 enum command_codes
 {
-    CREATE = 0;
-    READ = 1;
-    UPDATE = 2;
-    DELETE = 3;
+    CREATE_RECORD = 0;
+    READ_RECORD = 1;
+    UPDATE_RECORD = 2;
+    DELETE_RECORD = 3;
 }
 
 message request

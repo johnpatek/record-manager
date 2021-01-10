@@ -18,7 +18,7 @@ Please use the following guidelines to ensure that pull requests can be quickly 
 the existing code, discuss via [email](mailto:johnpatek2@gmail.com).
 + Add any necessary dependencies to the `common` directory as a submodule. If they are meant to replace
 an existing dependency, please remove the existing dependency and its submodule.
-+ Verify that the CI pipeline is not broken. This can be checked by either the build status on the README or
++ Verify that the CI pipeline is not broken. This can be checked by either the build status on the READ_RECORDME or
 by checking the pipelines on travis-ci.
 + In general, bug fixes will only require changes to the source and header files and can be tested using
 the existing unit tests, whereas features will often require changes to the unit tests.

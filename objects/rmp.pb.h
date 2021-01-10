@@ -81,16 +81,16 @@ PROTOBUF_NAMESPACE_CLOSE
 namespace rmp {
 
 enum command_codes : int {
-  CREATE = 0,
-  READ = 1,
-  UPDATE = 2,
-  DELETE = 3,
+  CREATE_RECORD = 0,
+  READ_RECORD = 1,
+  UPDATE_RECORD = 2,
+  DELETE_RECORD = 3,
   command_codes_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::min(),
   command_codes_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<::PROTOBUF_NAMESPACE_ID::int32>::max()
 };
 bool command_codes_IsValid(int value);
-constexpr command_codes command_codes_MIN = CREATE;
-constexpr command_codes command_codes_MAX = DELETE;
+constexpr command_codes command_codes_MIN = CREATE_RECORD;
+constexpr command_codes command_codes_MAX = DELETE_RECORD;
 constexpr int command_codes_ARRAYSIZE = command_codes_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* command_codes_descriptor();

@@ -108,7 +108,7 @@ std::pair<bool,std::string> rmp::client::create_record(
     info->set_name(data.name());
     info->set_phone(data.phone());
     return process_request(
-        rmp::command_codes::CREATE,
+        rmp::command_codes::CREATE_RECORD,
         record);
 }
 
@@ -118,7 +118,7 @@ std::pair<bool,std::string> rmp::client::read_record(
     rmp::record record;
     record.set_email(email);
     return process_request(
-        rmp::command_codes::READ,
+        rmp::command_codes::READ_RECORD,
         record);
 }
 
@@ -139,7 +139,7 @@ std::pair<bool,std::string> rmp::client::update_record(
         info->set_phone(data.phone());
     }
     return process_request(
-        rmp::command_codes::UPDATE,
+        rmp::command_codes::UPDATE_RECORD,
         record);
 }
 
@@ -149,7 +149,7 @@ std::pair<bool,std::string> rmp::client::delete_record(
     rmp::record record;
     record.set_email(email);
     return process_request(
-        rmp::command_codes::DELETE,
+        rmp::command_codes::DELETE_RECORD,
         record);
 }
 
@@ -386,16 +386,16 @@ void rmp::server::handle_request(
     {
         switch (request.command())
         {
-        case rmp::command_codes::CREATE:
+        case rmp::command_codes::CREATE_RECORD:
             response = on_create(request.payload());
             break;
-        case rmp::command_codes::READ:
+        case rmp::command_codes::READ_RECORD:
             response = on_read(request.payload());
             break;
-        case rmp::command_codes::UPDATE:
+        case rmp::command_codes::UPDATE_RECORD:
             response = on_update(request.payload());
             break;
-        case rmp::command_codes::DELETE:
+        case rmp::command_codes::DELETE_RECORD:
             response = on_delete(request.payload());
             break;        
         default:
@@ -548,7 +548,7 @@ static int find_record(
     return result;
 }
 
-const size_t READ_BUFFER_SIZE = 1024;
+const size_t READ_RECORD_BUFFER_SIZE = 1024;
 
 static void write_request(int socket, const rmp::request& request)
 {
@@ -558,7 +558,7 @@ static void write_request(int socket, const rmp::request& request)
 static void read_response(int socket, rmp::response& response)
 {
     std::vector<uint8_t> response_buffer;
-    std::array<uint8_t,READ_BUFFER_SIZE> read_buffer;
+    std::array<uint8_t,READ_RECORD_BUFFER_SIZE> read_buffer;
     size_t read_size;
     do
     {

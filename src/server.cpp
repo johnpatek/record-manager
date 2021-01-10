@@ -86,9 +86,6 @@ static bool server_init(
     return result;
 }
 
-#ifdef _WIN32
-
-#else
 static bool server_main(
     std::shared_ptr<rmp::server>& server) noexcept
 {
@@ -102,4 +99,3 @@ static bool server_main(
     }
     return true;
 }
-#endif

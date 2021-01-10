@@ -43,7 +43,17 @@
 #include <Winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
-#pragma  comment(lib, "ws2_32.lib ")
+#include <tchar.h>
+#include <wchar.h>
+#include <stdlib.h>
+#pragma  comment(lib, "ws2_32.lib")
+#pragma  comment(lib, "psapi.lib")
+#pragma  comment(lib, "Shlwapi.lib")
+#pragma  comment(lib, "advapi32.lib")
+#pragma  comment(lib, "iphlpapi.lib")
+#pragma  comment(lib, "shell32.lib")
+#pragma  comment(lib, "user32.lib")
+#pragma  comment(lib, "userenv.lib")
 #else /* Unix */
 #include <arpa/inet.h> 
 #include <sys/types.h>

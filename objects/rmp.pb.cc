@@ -171,8 +171,8 @@ const char descriptor_table_protodef_rmp_2eproto[] PROTOBUF_SECTION_VARIABLE(pro
   "records\030\001 \003(\0132\013.rmp.record\"8\n\007request\022\017\n"
   "\007command\030\001 \001(\r\022\034\n\007payload\030\002 \001(\0132\013.rmp.re"
   "cord\"+\n\010response\022\016\n\006status\030\001 \001(\r\022\017\n\007payl"
-  "oad\030\002 \001(\t*=\n\rcommand_codes\022\n\n\006CREATE\020\000\022\010"
-  "\n\004READ\020\001\022\n\n\006UPDATE\020\002\022\n\n\006DELETE\020\003*!\n\014stat"
+  "oad\030\002 \001(\t*=\n\rcommand_codes\022\n\n\006CREATE_RECORD\020\000\022\010"
+  "\n\004READ_RECORD\020\001\022\n\n\006UPDATE_RECORD\020\002\022\n\n\006DELETE_RECORD\020\003*!\n\014stat"
   "us_codes\022\010\n\004GOOD\020\000\022\007\n\003BAD\020\001b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_rmp_2eproto_deps[1] = {
