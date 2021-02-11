@@ -1,14 +1,14 @@
 
 path_classifiers:
   generated:
-    - exclude: "src/*"  # don't tag oatpp sources as generated
+    - exclude: "src/*" 
   library:
-    - exclude: "src/*"  # don't tag oatpp sources as library
+    - exclude: "src/*"
   template:
-    - exclude: "src/*"  # don't tag oatpp sources as template
+    - exclude: "src/*"
   test: 
-    - exclude: "src/*"  # don't tag oatpp sources as test
-    - test              # tag test folder only as test
+    - exclude: "test/*"
+    - test            
   docs:
     - README.md
     - LICENSE.txt
