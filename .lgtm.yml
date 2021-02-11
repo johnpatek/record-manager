@@ -14,3 +14,6 @@ path_classifiers:
     - LICENSE.txt
 extraction:
   cpp:
+    index:
+        build_command:
+        - ./cmake.py --common && ./cmake.py
