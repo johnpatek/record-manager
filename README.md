@@ -4,7 +4,7 @@
 
 Build:
 ```shell
-python3 cmake.py --common
+python3 cmake.py --external
 python3 cmake.py
 ```
 

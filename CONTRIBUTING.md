@@ -16,7 +16,7 @@ Please use the following guidelines to ensure that pull requests can be quickly 
 
 + Keep each request limited to a single change or feature. If your changes require a large overhaul of
 the existing code, discuss via [email](mailto:johnpatek2@gmail.com).
-+ Add any necessary dependencies to the `common` directory as a submodule. If they are meant to replace
++ Add any necessary dependencies to the `external` directory as a submodule. If they are meant to replace
 an existing dependency, please remove the existing dependency and its submodule.
 + Verify that the CI pipeline is not broken. This can be checked by either the build status on the READ_RECORDME or
 by checking the pipelines on travis-ci.

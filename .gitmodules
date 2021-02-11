@@ -1,9 +1,9 @@
-[submodule "common/protobuf"]
-	path = common/protobuf
+[submodule "external/protobuf"]
+	path = external/protobuf
 	url = https://github.com/protocolbuffers/protobuf
-[submodule "common/libuv"]
-	path = common/libuv
+[submodule "external/libuv"]
+	path = external/libuv
 	url = https://github.com/johnpatek/libuv
-[submodule "common/googletest"]
-	path = common/googletest
+[submodule "external/googletest"]
+	path = external/googletest
 	url = https://github.com/google/googletest

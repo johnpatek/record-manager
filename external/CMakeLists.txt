@@ -24,7 +24,7 @@
 #####################################################################
 cmake_minimum_required(VERSION 3.0)
 
-project(record-manager-common)
+project(record-manager-external)
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install)
 if(WIN32)

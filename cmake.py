@@ -32,24 +32,24 @@ def subprocess_run(args):
 
 # Argument parsing
 argument_parser = argparse.ArgumentParser()
-argument_parser.add_argument('-c','--common',action='store_true')
+argument_parser.add_argument('-c','--external',action='store_true')
 argument_parser.add_argument('-r','--rebuild',action='store_true')
 
 def clean_path(path):
     if(os.path.exists(path)):
         shutil.rmtree(path)
 
-COMMON_BUILD = os.path.join('common','build')
+EXTERNAL_BUILD = os.path.join('external','build')
 
 # build targets
-def build_common(rebuild):
+def build_external(rebuild):
     result = 0
     result = result + subprocess_run(['git','submodule','update','--init','--recursive'])
     if(rebuild):
-        clean_path(COMMON_BUILD) 
-    if(not(os.path.exists(COMMON_BUILD))):
-        os.mkdir(COMMON_BUILD)
-    os.chdir(COMMON_BUILD)
+        clean_path(EXTERNAL_BUILD) 
+    if(not(os.path.exists(EXTERNAL_BUILD))):
+        os.mkdir(EXTERNAL_BUILD)
+    os.chdir(EXTERNAL_BUILD)
     result = result + subprocess_run(['cmake','..','-Dprotobuf_BUILD_TESTS=OFF'])
     result = result + subprocess_run(MAKE_INSTALL)
     os.chdir('..')
@@ -72,8 +72,8 @@ def build_library(rebuild):
 def build_main():
     result = 0
     args = argument_parser.parse_args()
-    if args.common:
-        result = result + build_common(args.rebuild)
+    if args.external:
+        result = result + build_external(args.rebuild)
     else:
         result = result + build_library(
             args.rebuild)
