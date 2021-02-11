@@ -1,7 +1,8 @@
 # Record Manager
 
 [![Build Status](https://travis-ci.com/johnpatek/record-manager.svg?branch=master)](https://travis-ci.com/johnpatek/record-manager)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/johnpatek/record-manager.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/johnpatek/record-manager/alerts/)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/go/g/johnpatek/record-manager.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/johnpatek/record-manager/context:cpp)
+
 
 Build:
 ```shell
